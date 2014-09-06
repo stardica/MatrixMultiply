@@ -4,7 +4,7 @@
 #include "rdtsc.h"
 
 
-#define SIZE 5
+#define SIZE 10
 #define MODE 1
 
 int matA[SIZE][SIZE];
