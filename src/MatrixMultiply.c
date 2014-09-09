@@ -7,6 +7,10 @@
 #define SIZE 4
 #define MODE 2
 
+//macros
+ #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
+
+
 //function declarations
 void print_me(char *string);
 
@@ -121,8 +125,14 @@ int main(int argc, char *argv[]){
 		object_ptr = &object;
 		object_ptr->next = &object;
 		printf("this is the value of the pointer to struct object: %p\n", object_ptr->next);
-		printf("done\n");
 
+		//Macro fun
+		PRINT(ptr, ptr);
+		PRINT(object.next, object.next);
+		PRINT(object_ptr->next, object_ptr->next);
+
+		//make sure the code ran all the way through.
+		printf("done\n");
 
 	}
 	else
