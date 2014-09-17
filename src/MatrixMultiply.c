@@ -1,22 +1,23 @@
 #include <stdio.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include "rdtsc.h"
 
-#define SIZE 4
+
+//SIZE sets height and width of matrix
+//MODE 0 = Test code
+//MODE 1 = single thread Matrix Multiply
+//MODE 2 = Multi thread Matrix Multiply
+#define SIZE 2
 #define MODE 2
 
 //macros
  #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
 
-
-//function declarations
-void print_me(char *string);
-
 //objects
 struct Object{
-
 	char *string;
 	void (*print_me)(void *ptr);
 	struct Object *next;
@@ -26,9 +27,21 @@ struct Object{
 struct Object object;
 struct Object *object_ptr;
 
+struct RowColumnData{
+	int RowNum;
+	int ColumnNum;
+};
+
+//Matrices
 int matA[SIZE][SIZE];
 int matB[SIZE][SIZE];
 int matC[SIZE][SIZE];
+
+//function declarations
+void print_me(char *string);
+void *RowColumnMultiply(void *data);
+void LoadMatrices(void);
+void PrintMatrices(void);
 
 
 //Main///////////////////////////////
@@ -36,9 +49,39 @@ int matC[SIZE][SIZE];
 
 int main(int argc, char *argv[]){
 
+	if (MODE == 2){
 
-	if (MODE == 1){
+		printf("---Multi Thread Mode---\n\n");
+		int i, j, k;
 
+		LoadMatrices();
+
+		pthread_t tid[SIZE*SIZE];
+
+		//start our threads
+		k=0;
+		for(i=0;i<SIZE;i++){
+			for(j=0;j<SIZE;j++){
+				struct RowColumnData *RCData = (struct RowColumnData *) malloc(sizeof(struct RowColumnData));
+				RCData->RowNum = i;
+				RCData->ColumnNum = j;
+				//printf("Thread create %d Row %d Col %d\n", k, RCData->RowNum, RCData->ColumnNum);
+				pthread_create(&tid[k], NULL, RowColumnMultiply, RCData);
+				k++;
+			}
+		}
+
+		//Join threads////////////////////////////
+		for (i=0;i<(SIZE*SIZE);i++){
+			pthread_join(tid[i], NULL);
+			//printf("Thread join %d", i);
+		}
+
+		PrintMatrices();
+	}
+	else if (MODE == 1){
+
+		printf("---Single Thread Mode---\n\n");
 		unsigned long long a, b;
 		a = rdtsc();
 		time_t t;
@@ -46,18 +89,7 @@ int main(int argc, char *argv[]){
 
 		srand((unsigned) time(&t));
 
-		//fill mats a and b with random int between 1 and 10
-		for (i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				matA[i][j] = rand() % 10 + 1;
-			}
-		}
-
-		for (i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				matB[i][j] = rand() % 10 + 1;
-			}
-		}
+		LoadMatrices();
 
 		//multiply mats/////////////////////////
 		for (i=0;i<SIZE;i++){
@@ -68,45 +100,21 @@ int main(int argc, char *argv[]){
 			}
 		}
 
-
-		//Display output/////////////////////////
-		printf("Matrix A[][]:\n");
-		for (i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				printf("%d ", matA[i][j]);
-			}
-			printf("\n");
-		}
-
-		printf("\nMatrix B[][]:\n");
-		for (i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				printf("%d ", matB[i][j]);
-			}
-			printf("\n");
-		}
-
-		printf("\nMatrix C[][] = A[][]*B[][]:\n");
-		for (i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				printf("%d ", matC[i][j]);
-			}
-			printf("\n");
-		}
+		PrintMatrices();
 
 		b = rdtsc();
 		printf("\nDone. Number of clock Cycles: %llu\n", b-a);
 	}
-
-	else if (MODE == 2)
+	else if (MODE == 0)
 	{
+		printf("---Misc Tests---\n\n");
 
 		printf("size of long long is %d\n", sizeof(long long));
 		printf("size of long is %d\n", sizeof(long));
 		printf("size of int is %d\n", sizeof(int));
 		printf("size of short is %d\n", sizeof(short));
 
-		char *string = "test sting";
+		char *string = "test string";
 		printf("Here is the string 1: \"%s\"\n", string);
 
 		//Using the struct
@@ -138,18 +146,82 @@ int main(int argc, char *argv[]){
 	else
 	{
 
-		printf("Invalid mode");
+		printf("---Invalid Mode Set---\n\n");
 
 	}
-
 	return 1;
 }
-
-
 
 void print_me(char *string)
 {
 
-	printf("Here is the string 2: \"%s\"\n", string);
+	printf("Here is the string: \"%s\"\n", string);
 
+}
+
+void LoadMatrices(void){
+
+	int i, j;
+
+	time_t t;
+	srand((unsigned) time(&t));
+
+	//fill mats a and b with random int between 1 and 10
+	for (i=0;i<SIZE;i++){
+		for(j=0;j<SIZE;j++){
+			matA[i][j] = rand() % 10 + 1;
+		}
+	}
+
+	for (i=0;i<SIZE;i++){
+		for(j=0;j<SIZE;j++){
+			matB[i][j] = rand() % 10 + 1;
+		}
+	}
+}
+
+void PrintMatrices(void){
+
+	int i, j;
+
+	//Display output//////////////////////////
+	printf("Matrix A[][]:\n");
+	for (i=0;i<SIZE;i++){
+		for(j=0;j<SIZE;j++){
+	 		printf("%d ", matA[i][j]);
+	 	}
+	 	printf("\n");
+	}
+
+	 printf("\nMatrix B[][]:\n");
+	 for (i=0;i<SIZE;i++){
+	 	for(j=0;j<SIZE;j++){
+	 		printf("%d ", matB[i][j]);
+	 	}
+		printf("\n");
+	 }
+
+	 printf("\nMatrix C[][] = A[][]*B[][]:\n");
+	 for (i=0;i<SIZE;i++){
+	 	for(j=0;j<SIZE;j++){
+	 		printf("%d ", matC[i][j]);
+	 	}
+	 printf("\n");
+	 }
+}
+
+void *RowColumnMultiply(void *data){
+
+
+	struct RowColumnData *RCData = data;
+	int i, SumOfProducts = 0;
+
+	//printf("from thread Row %d Col %d\n", RCData->RowNum, RCData->ColumnNum);
+	for(i=0;i<SIZE;i++){
+		SumOfProducts += matA[RCData->RowNum][i] * matB[i][RCData->ColumnNum];
+	   }
+
+	//assign the sum to its coordinate
+	matC[RCData->RowNum][RCData->ColumnNum] = SumOfProducts;
+	pthread_exit(0);
 }
