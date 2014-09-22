@@ -18,8 +18,11 @@
 #define SIZE 3
 #define MODE 4
 
-#define KERNELPATHIN	"/home/stardica/Desktop/Kernels/hello.cl"
-#define KERNELPATHOUT	"/home/stardica/Desktop/Kernels/hello.cl.bin"
+char KERNELPATHIN[] = "/home/stardica/Desktop/Kernels/MatrixMultiplication_Kernels.cl";
+char KERNELPATHOUT[] = "/home/stardica/Desktop/Kernels/MatrixMultiplication_Kernels.cl.bin";
+
+//1 if GPU 0 if CPU -1 if not set
+int CPUGPUFLAG = -1;
 
 //macros
 #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
@@ -323,15 +326,20 @@ cl_context CreateContext() {
     cl_context_properties contextProperties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)firstPlatformId, 0 };
 
     context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU, NULL, NULL, &errNum);
+    CPUGPUFLAG = 1;
 
     if (errNum != CL_SUCCESS)
     {
         printf("Could not create GPU context, trying CPU.\n");
 
+
         context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU, NULL, NULL, &errNum);
+        CPUGPUFLAG = 0;
+
         if (errNum != CL_SUCCESS)
         {
             printf("Failed to create an OpenCL GPU or CPU context.\n");
+            CPUGPUFLAG = -1;
             return NULL;
         }
     }
@@ -463,6 +471,7 @@ bool SaveProgramBinary(cl_program program, cl_device_id device, const char* file
     cl_device_id *devices;
     size_t *programBinarySizes;
     unsigned char **programBinaries;
+    cl_uint i;
 
     // 1 - Query for number of devices attached to program
     errNum = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &numDevices, NULL);
@@ -496,7 +505,7 @@ bool SaveProgramBinary(cl_program program, cl_device_id device, const char* file
 
     //unsigned char **programBinaries = new unsigned char*[numDevices];
     programBinaries = (unsigned char **) malloc(sizeof(unsigned char *[numDevices]));
-    cl_uint i;
+
     for (i = 0; i < numDevices; i++)
     {
 
@@ -522,7 +531,14 @@ bool SaveProgramBinary(cl_program program, cl_device_id device, const char* file
     }
 
     // 5 - Finally store the binaries for the device requested out to disk for future reading.
-    //cl_uint i;
+
+    if(CPUGPUFLAG == 1){
+    	strcat(fileName, ".GPU");
+    }
+    else if (CPUGPUFLAG == 0){
+    	strcat(fileName, ".CPU");
+    }
+
     for (i = 0; i < numDevices; i++)
     {
         // Store the binary just for the device requested.  In a scenario where
