@@ -5,22 +5,29 @@
 #include <string.h>
 #include "rdtsc.h"
 #include <CL/cl.h>
+#include <math.h>
 
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
 //MODE 1 = single thread Matrix Multiply
 //MODE 2 = Multi thread Matrix Multiply
-#define SIZE 2
-#define MODE 3
-#define PROGRAM_FILE "/home/stardica/Desktop/MatrixMultiply/src/add_numbers.cl"
-#define KERNEL_FUNC "add_numbers"
-#define ARRAY_SIZE 64
+//MODE 3 = Stream Mode Matrix Multiply
+//MODE 4 = OpenCL Kernel Precompile
+
+#define SIZE 3
+#define MODE 4
+
+#define KERNELPATHIN	"/home/stardica/Desktop/Kernels/hello.cl"
+#define KERNELPATHOUT	"/home/stardica/Desktop/Kernels/hello.cl.bin"
 
 //macros
 #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
 #define PRINANDTFLUSH 	printf("code ran here\n");\
 						fflush(stdout);
+
+typedef int bool;
+enum { false, true };
 
 //objects
 struct Object{
@@ -48,36 +55,11 @@ void print_me(char *string);
 void *RowColumnMultiply(void *data);
 void LoadMatrices(void);
 void PrintMatrices(void);
-cl_device_id create_device(void);
-cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename);
-
-
-char *OpenCLProgram = "__kernel void add_numbers(__global float4* data, \
-      __local float* local_result, __global float* group_result) {		\
-																		\
-   float sum;\
-   float4 input1, input2, sum_vector;\
-   uint global_addr, local_addr;\
-																		\
-   global_addr = get_global_id(0) * 2;\
-   input1 = data[global_addr];\
-   input2 = data[global_addr+1];\
-   sum_vector = input1 + input2;\
-\
-   local_addr = get_local_id(0);\
-   local_result[local_addr] = sum_vector.s0 + sum_vector.s1 +\
-                              sum_vector.s2 + sum_vector.s3;\
-   barrier(CLK_LOCAL_MEM_FENCE);\
-\
-   if(get_local_id(0) == 0) {\
-      sum = 0.0f;\
-      for(int i=0; i<get_local_size(0); i++) {\
-         sum += local_result[i];\
-      }\
-      group_result[get_group_id(0)] = sum;\
-   }\
-}";
-
+cl_context CreateContext(void);
+cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device);
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program);
+cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName);
+bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName);
 
 
 //Main///////////////////////////////
@@ -85,109 +67,61 @@ char *OpenCLProgram = "__kernel void add_numbers(__global float4* data, \
 
 int main(int argc, char *argv[]){
 
-	if (MODE == 3){
+	if (MODE == 4){
+
+	    cl_context context = 0;
+	    cl_command_queue commandQueue = 0;
+	    cl_program program = 0;
+	    cl_device_id device = 0;
+
+	    //Create an OpenCL context on first available platform
+	    context = CreateContext();
+	    if (context == NULL)
+	    {
+	        printf("Failed to create OpenCL context.\n");
+	        return 1;
+	    }
+
+	    //Create a command-queue on the first device available on the created context
+	    commandQueue = CreateCommandQueue(context, &device);
+	    if (commandQueue == NULL)
+	    {
+	    	printf("Failed to create commandQueue.\n");
+	    	Cleanup(context, commandQueue, program);
+	    	return 1;
+	    }
+
+	    // Create OpenCL program and store the binary for future use.
+	    printf("Attempting to create kernel binary from source.\n");
+	    program = CreateProgram(context, device, KERNELPATHIN);
+	    if (program == NULL)
+	    {
+	    	printf("Failed to create Program");
+	    	Cleanup(context, commandQueue, program);
+	    	return 1;
+	    }
+
+	    printf("Kernel is saved.\n");
+	    if (SaveProgramBinary(program, device, KERNELPATHOUT) == false)
+	    {
+	        printf("Failed to write program binary.\n");
+	        Cleanup(context, commandQueue, program);
+	        return 1;
+	     }
+
+	    printf("---Done---");
+
+	    return 1;
+
+
+	}
+
+
+	else if (MODE == 3){
 
 		printf("---Stream Mode---\n\n");
 
-		/* OpenCL structures */
-		   cl_device_id device;
-		   cl_context context;
-		   cl_program program;
-		   cl_kernel kernel;
-		   cl_command_queue queue;
-		   cl_int i, j, err;
-		   size_t local_size, global_size;
-
-		   /* Data and buffers */
-		   float data[ARRAY_SIZE];
-		   float sum[2], total, actual_sum;
-		   cl_mem input_buffer, sum_buffer;
-		   cl_int num_groups;
-
-		   /* Initialize data */
-		   for(i=0; i<ARRAY_SIZE; i++) {
-		      data[i] = 1.0f*i;
-		   }
-
-		   /* Create device and context */
-		   device = create_device();
-		   context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-		   if(err < 0) {
-		      perror("Couldn't create a context");
-		      exit(1);
-		   }
-
-		   /* Build program */
-		   program = build_program(context, device, PROGRAM_FILE);
-
-		   /* Create data buffer */
-		   global_size = 8;
-		   local_size = 4;
-		   num_groups = global_size/local_size;
-		   input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, ARRAY_SIZE * sizeof(float), data, &err);
-		   sum_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, num_groups * sizeof(float), sum, &err);
-
-		   if(err < 0) {
-		      perror("Couldn't create a buffer");
-		      exit(1);
-		   };
-
-		   /* Create a command queue */
-		   queue = clCreateCommandQueue(context, device, 0, &err);
-		   if(err < 0) {
-		      perror("Couldn't create a command queue");
-		      exit(1);
-		   };
-
-		   /* Create a kernel */
-		   kernel = clCreateKernel(program, KERNEL_FUNC, &err);
-		   if(err < 0) {
-		      perror("Couldn't create a kernel");
-		      exit(1);
-		   };
-
-		   /* Create kernel arguments */
-		   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input_buffer);
-		   err |= clSetKernelArg(kernel, 1, local_size * sizeof(float), NULL);
-		   err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &sum_buffer);
-		   if(err < 0) {
-		      perror("Couldn't create a kernel argument");
-		      exit(1);
-		   }
-
-		   /* Enqueue kernel */
-		   err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
-		   if(err < 0) {
-		      perror("Couldn't enqueue the kernel");
-		      exit(1);
-		   }
-
-		   /* Read the kernel's output */
-		   err = clEnqueueReadBuffer(queue, sum_buffer, CL_TRUE, 0, sizeof(sum), sum, 0, NULL, NULL);
-		   if(err < 0) {
-		      perror("Couldn't read the buffer");
-		      exit(1);
-		   }
-
-		   /* Check result */
-		   total = 0.0f;
-		   for(j=0; j<num_groups; j++) {
-		      total += sum[j];
-		   }
-		   actual_sum = 1.0f * ARRAY_SIZE/2*(ARRAY_SIZE-1);
-		   printf("Computed sum = %.1f.\n", total);
-		   if(fabs(total - actual_sum) > 0.01*fabs(actual_sum))
-		      printf("Check failed.\n");
-		   else
-		      printf("Check passed.\n");
-
-		   /* Deallocate resources */
-		   clReleaseKernel(kernel);
-		   clReleaseMemObject(sum_buffer);
-		   clReleaseMemObject(input_buffer);
-		   clReleaseCommandQueue(queue);
-		   clReleaseProgram(program);
-		   clReleaseContext(context);
+		return 1;
 
 	}
 	else if (MODE == 2){
@@ -367,77 +301,249 @@ void *RowColumnMultiply(void *data){
 	pthread_exit(0);
 }
 
-/* Find a GPU or CPU associated with the first available platform */
-cl_device_id create_device() {
+cl_context CreateContext() {
+    cl_int errNum;
+    cl_uint numPlatforms;
+    cl_platform_id firstPlatformId;
+    cl_context context = NULL;
 
-   cl_platform_id platform;
-   cl_device_id dev;
-   int err;
+    // First, select an OpenCL platform to run on.  For this example, we
+    // simply choose the first available platform.  Normally, you would
+    // query for all available platforms and select the most appropriate one.
+    errNum = clGetPlatformIDs(1, &firstPlatformId, &numPlatforms);
+    if (errNum != CL_SUCCESS || numPlatforms <= 0)
+    {
+        printf("Failed to find any OpenCL platforms.\n");
+        return NULL;
+    }
 
-   /* Identify a platform */
-   err = clGetPlatformIDs(1, &platform, NULL);
-   if(err < 0) {
-      perror("Couldn't identify a platform");
-      exit(1);
-   }
+    // Next, create an OpenCL context on the platform.  Attempt to
+    // create a GPU-based context, and if that fails, try to create
+    // a CPU-based context.
+    cl_context_properties contextProperties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)firstPlatformId, 0 };
 
-   /* Access a device */
-   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &dev, NULL);
-   if(err == CL_DEVICE_NOT_FOUND) {
-      err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
-   }
-   if(err < 0) {
-      perror("Couldn't access any devices");
-      exit(1);
-   }
+    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU, NULL, NULL, &errNum);
 
-   return dev;
+    if (errNum != CL_SUCCESS)
+    {
+        printf("Could not create GPU context, trying CPU.\n");
+
+        context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU, NULL, NULL, &errNum);
+        if (errNum != CL_SUCCESS)
+        {
+            printf("Failed to create an OpenCL GPU or CPU context.\n");
+            return NULL;
+        }
+    }
+
+    return context;
 }
 
-/* Create program from a file and compile it */
-cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename) {
+cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device)
+{
+    cl_int errNum;
+    cl_device_id *devices;
+    cl_command_queue commandQueue = NULL;
+    size_t deviceBufferSize = -1;
 
-   cl_program program;
-   FILE *program_handle;
-   char *program_buffer, *program_log;
-   size_t program_size, log_size;
-   int err;
+    // First get the size of the devices buffer
+    errNum = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, NULL, &deviceBufferSize);
+    if (errNum != CL_SUCCESS)
+    {
+        printf("Failed call to clGetContextInfo(...,GL_CONTEXT_DEVICES,...)\n");
+        return NULL;
+    }
 
-   /* Read program file and place content into buffer */
-   program_handle = fopen(filename, "r");
-   if(program_handle == NULL) {
-      perror("Couldn't find the program file");
-      exit(1);
-   }
-   fseek(program_handle, 0, SEEK_END);
-   program_size = ftell(program_handle);
-   rewind(program_handle);
-   program_buffer = (char*)malloc(program_size + 1);
-   program_buffer[program_size] = '\0';
-   fread(program_buffer, sizeof(char), program_size, program_handle);
-   fclose(program_handle);
+    if (deviceBufferSize <= 0)
+    {
+        printf("No devices available.\n");
+        return NULL;
+    }
 
-   /* Create program from file */
-   program = clCreateProgramWithSource(ctx, 1, (const char**)&program_buffer, &program_size, &err);
-   if(err < 0) {
-      perror("Couldn't create the program");
-      exit(1);
-   }
-   free(program_buffer);
+    // Allocate memory for the devices buffer
+    devices = (cl_device_id *) malloc(deviceBufferSize / sizeof(cl_device_id));
+    errNum = clGetContextInfo(context, CL_CONTEXT_DEVICES, deviceBufferSize, devices, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+        free(devices);
+        printf("Failed to get device IDs");
+        return NULL;
+    }
 
-   /* Build program */
-   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-   if(err < 0) {
+    // In this example, we just choose the first available device.  In a
+    // real program, you would likely use all available devices or choose
+    // the highest performance device based on OpenCL device queries
+    commandQueue = clCreateCommandQueue(context, devices[0], 0, NULL);
+    if (commandQueue == NULL)
+    {
+        free(devices);
+        printf("Failed to create commandQueue for device 0");
+        return NULL;
+    }
 
-      /* Find size of log and print to std output */
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
-      program_log = (char*) malloc(log_size + 1);
-      program_log[log_size] = '\0';
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, log_size + 1, program_log, NULL);
-      printf("%s\n", program_log);
-      free(program_log);
-      exit(1);
-   }
+    *device = devices[0];
+    free(devices);
+    return commandQueue;
+}
 
-   return program;
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program){
+
+
+	if (commandQueue != 0)
+		clReleaseCommandQueue(commandQueue);
+
+    if (program != 0)
+        clReleaseProgram(program);
+
+    if (context != 0)
+        clReleaseContext(context);
+}
+
+cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName) {
+
+	cl_int errNum;
+    cl_program program;
+
+    char *buffer;
+    long length = 0;
+    //char temp;
+    FILE *fp;
+
+    fp = fopen(fileName, "r");
+    if (fp == NULL)
+    {
+        printf("Failed to open input file.\n");
+        return NULL;
+    }
+
+    fseek(fp, 0L, SEEK_END);
+    //apparently using ftell to get file size of a text file is bad.
+    length = ftell(fp);
+    if (length < 0){
+    	printf("Error getting file size.\n");
+    	return NULL;
+    }
+    fseek(fp, 0L, SEEK_SET);
+
+    buffer = (char *) malloc(length + 1);
+    fread(buffer, 1, length, fp);
+    //ftell is bad. Sometimes you get garbage at the end of the string.
+    //add 0 to the end to terminate the string correctly.
+    buffer[length] = 0;
+    printf("%s\n", buffer);
+    fclose(fp);
+
+    program = clCreateProgramWithSource(context, 1, (const char**)&buffer, NULL, NULL);
+    if (program == NULL)
+    {
+        printf("Failed to create CL program from source.\n");
+        return NULL;
+    }
+
+    errNum = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+        // Determine the reason for the error
+        char buildLog[16384];
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, sizeof(buildLog), buildLog, NULL);
+
+        printf("Error in kernel\n");
+        //printf("%s\n", buildLog);
+        clReleaseProgram(program);
+        return NULL;
+    }
+
+    return program;
+}
+
+bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName){
+
+	cl_uint numDevices = 0;
+    cl_int errNum;
+    cl_device_id *devices;
+    size_t *programBinarySizes;
+    unsigned char **programBinaries;
+
+    // 1 - Query for number of devices attached to program
+    errNum = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint), &numDevices, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+        printf("Error querying for number of devices.\n");
+        return false;
+    }
+
+    // 2 - Get all of the Device IDs
+    devices = (cl_device_id *) malloc(sizeof(cl_device_id[numDevices]));
+    errNum = clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * numDevices, devices, NULL);
+
+    if (errNum != CL_SUCCESS)
+    {
+    	printf("Error querying for devices.\n");
+        free(devices);
+        return false;
+    }
+
+    // 3 - Determine the size of each program binary
+    programBinarySizes = (size_t *) malloc(sizeof(size_t[numDevices]));
+    errNum = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * numDevices, programBinarySizes, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+    	printf("Error querying for program binary sizes.\n");
+    	free(devices);
+    	free(programBinarySizes);
+        return false;
+    }
+
+    //unsigned char **programBinaries = new unsigned char*[numDevices];
+    programBinaries = (unsigned char **) malloc(sizeof(unsigned char *[numDevices]));
+    cl_uint i;
+    for (i = 0; i < numDevices; i++)
+    {
+
+    	//programBinaries[i] = new unsigned char[programBinarySizes[i]];
+    	programBinaries[i] = malloc(sizeof(unsigned char[programBinarySizes[i]]));
+
+    }
+
+    // 4 - Get all of the program binaries
+    errNum = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * numDevices, programBinaries, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+    	printf("Error querying for program binaries\n");
+    	free(devices);
+    	free(programBinarySizes);
+        cl_uint i;
+    	for (i = 0; i < numDevices; i++)
+        {
+            free(programBinaries[i]);
+        }
+        free(programBinaries);
+        return false;
+    }
+
+    // 5 - Finally store the binaries for the device requested out to disk for future reading.
+    //cl_uint i;
+    for (i = 0; i < numDevices; i++)
+    {
+        // Store the binary just for the device requested.  In a scenario where
+        // multiple devices were being used you would save all of the binaries out here.
+        if (devices[i] == device)
+        {
+            FILE *fp = fopen(fileName, "wb");
+            fwrite(programBinaries[i], 1, programBinarySizes[i], fp);
+            fclose(fp);
+            break;
+        }
+    }
+
+    // Cleanup
+    free(devices);
+    free(programBinarySizes);
+
+    for (i = 0; i < numDevices; i++)
+    {
+    	free(programBinaries[i]);
+    }
+    free(programBinaries);
+    return true;
 }
