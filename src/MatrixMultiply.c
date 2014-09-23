@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include "rdtsc.h"
-#include <CL/cl.h>
+#include "/opt/AMDAPP/include/CL/cl.h"
 #include <math.h>
 
 
@@ -15,11 +15,12 @@
 //MODE 3 = Stream Mode Matrix Multiply
 //MODE 4 = OpenCL Kernel Precompile
 
-#define SIZE 3
-#define MODE 4
+#define SIZE 4
+#define MODE 3
 
-char KERNELPATHIN[] = "/home/stardica/Desktop/Kernels/MatrixMultiplication_Kernels.cl";
-char KERNELPATHOUT[] = "/home/stardica/Desktop/Kernels/MatrixMultiplication_Kernels.cl.bin";
+char KERNELPATHIN[] = "/home/stardica/Desktop/Kernels/vector.cl";
+char KERNELPATHOUT[] = "/home/stardica/Desktop/Kernels/vector.cl.bin";
+
 
 //1 if GPU 0 if CPU -1 if not set
 int CPUGPUFLAG = -1;
@@ -60,9 +61,10 @@ void LoadMatrices(void);
 void PrintMatrices(void);
 cl_context CreateContext(void);
 cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device);
-void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program);
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel, cl_mem memObjects[3]);
 cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName);
 bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName);
+cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName);
 
 
 //Main///////////////////////////////
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]){
 	    if (commandQueue == NULL)
 	    {
 	    	printf("Failed to create commandQueue.\n");
-	    	Cleanup(context, commandQueue, program);
+	    	Cleanup(context, commandQueue, program, NULL, NULL);
 	    	return 1;
 	    }
 
@@ -100,7 +102,7 @@ int main(int argc, char *argv[]){
 	    if (program == NULL)
 	    {
 	    	printf("Failed to create Program");
-	    	Cleanup(context, commandQueue, program);
+	    	Cleanup(context, commandQueue, program, NULL, NULL);
 	    	return 1;
 	    }
 
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]){
 	    if (SaveProgramBinary(program, device, KERNELPATHOUT) == false)
 	    {
 	        printf("Failed to write program binary.\n");
-	        Cleanup(context, commandQueue, program);
+	        Cleanup(context, commandQueue, program, NULL, NULL);
 	        return 1;
 	     }
 
@@ -122,7 +124,129 @@ int main(int argc, char *argv[]){
 
 	else if (MODE == 3){
 
+		//todo free remaining objects not passed to cleanup
+
 		printf("---Stream Mode---\n\n");
+
+	    // Create the two input vectors
+	    int i;
+	    //const int LIST_SIZE = SIZE;
+	    int *A = (int*)malloc(sizeof(int)*SIZE);
+	    int *B = (int*)malloc(sizeof(int)*SIZE);
+	    int *C = (int*)malloc(sizeof(int)*SIZE);
+	    for(i = 0; i < SIZE; i++) {
+	        A[i] = i;
+	        B[i] = i;
+	    }
+
+	    //Get platform and device information
+	    cl_context context = 0;
+	    cl_command_queue commandQueue = 0;
+	    cl_program program = 0;
+	    cl_device_id device = 0;
+	    cl_kernel kernel = 0;
+	    cl_mem a_mem_obj = 0;
+	    cl_mem b_mem_obj = 0;
+	    cl_mem c_mem_obj = 0;
+	    cl_uint err = 0;
+	    //char *filepath = NULL;
+
+	    //Create the context
+	    context = CreateContext();
+	    if (context == NULL)
+	    {
+	    	printf("Failed to create OpenCL context.\n");
+	    	return 1;
+	    }
+
+	    //Create a command-queue on the first device available on the created context
+	    commandQueue = CreateCommandQueue(context, &device);
+	    if (commandQueue == NULL)
+	    {
+	    	printf("Failed to create command queue.\n");
+	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	return 1;
+	    }
+
+	    //create the program from the binary
+	    program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/Kernels/vector.cl.bin.GPU");
+	    if (program == NULL)
+	    {
+	    	printf("Failed to load kernel binary,\n");
+	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	return 1;
+	    }
+
+
+	    // Create OpenCL kernel
+	    kernel = clCreateKernel(program, "vector_add", NULL);
+	    if (kernel == NULL)
+	    {
+	    	printf("Failed to create kernel.\n");
+	    	Cleanup(context, commandQueue, program, kernel, NULL);
+	    	return 1;
+	    }
+
+  	    //Create memory buffers on the device for each vector
+	    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(int), NULL, NULL);
+	    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(int), NULL, NULL);
+	    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(int), NULL, NULL);
+	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
+	    {
+	    	printf("Failed to create memory objects.\n");
+	    	Cleanup(context, commandQueue, program, kernel, NULL);
+	    	return 1;
+	    }
+
+	    //Copy the lists A and B to their respective memory buffers
+	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, SIZE * sizeof(int), A, 0, NULL, NULL);
+	    clEnqueueWriteBuffer(commandQueue, b_mem_obj, CL_TRUE, 0, SIZE * sizeof(int), B, 0, NULL, NULL);
+
+	    // Set the arguments of the kernel
+	    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&a_mem_obj);
+	    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&b_mem_obj);
+	    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&c_mem_obj);
+	    if (err != CL_SUCCESS)
+	    {
+	    	printf("Kernel args not set.\n");
+	    	return 1;
+	    }
+
+	    // Execute the OpenCL kernel on the list
+	    size_t GlobalWorkSize = SIZE; // Process the entire lists
+	    size_t LocalWorkSize = 64; // Divide work items into groups of 64
+
+	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &GlobalWorkSize, &LocalWorkSize, 0, NULL, NULL);
+	    if (err != CL_SUCCESS)
+	    {
+	    	printf("ND range not enqueued.\n");
+	    	return 1;
+	    }
+
+	    //Read the memory buffer C on the device to the local variable C
+	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, SIZE * sizeof(int), C, 0, NULL, NULL);
+	    if (err != CL_SUCCESS)
+	    {
+	    	printf("Buffer not returned.\n");
+	    	return 1;
+	    }
+
+	    // Display the result to the screen
+	    for(i = 0; i < SIZE; i++)
+	    {
+	        printf("%d + %d = %d\n", A[i], B[i], C[i]);
+	    }
+
+	    // Clean up
+	    err = clFlush(commandQueue);
+	    err = clFinish(commandQueue);
+	    Cleanup(context, commandQueue, program, kernel, NULL);
+	    err = clReleaseMemObject(a_mem_obj);
+	    err = clReleaseMemObject(b_mem_obj);
+	    err = clReleaseMemObject(c_mem_obj);
+	    free(A);
+	    free(B);
+	    free(C);
 
 		return 1;
 
@@ -394,17 +518,28 @@ cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device)
     return commandQueue;
 }
 
-void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program){
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel, cl_mem memObjects[3]) {
 
 
-	if (commandQueue != 0)
-		clReleaseCommandQueue(commandQueue);
+	int i;
+
+	for (i = 0; i < 3; i++)
+    {
+        if (memObjects[i] != 0)
+            clReleaseMemObject(memObjects[i]);
+    }
+    if (commandQueue != 0)
+        clReleaseCommandQueue(commandQueue);
+
+    if (kernel != 0)
+        clReleaseKernel(kernel);
 
     if (program != 0)
         clReleaseProgram(program);
 
     if (context != 0)
         clReleaseContext(context);
+
 }
 
 cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName) {
@@ -562,4 +697,60 @@ bool SaveProgramBinary(cl_program program, cl_device_id device, const char* file
     }
     free(programBinaries);
     return true;
+}
+
+cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName)
+{
+    FILE *fp = fopen(fileName, "rb");
+    if (fp == NULL)
+    {
+        return NULL;
+    }
+
+    // Determine the size of the binary
+    size_t binarySize;
+    fseek(fp, 0, SEEK_END);
+    binarySize = ftell(fp);
+    rewind(fp);
+
+    unsigned char *programBinary;
+    programBinary = (unsigned char *) malloc(sizeof(unsigned char[binarySize]));
+
+    fread(programBinary, 1, binarySize, fp);
+    fclose(fp);
+
+    cl_int errNum = 0;
+    cl_int binaryStatus;
+    cl_program program;
+
+    program = clCreateProgramWithBinary(context, 1, &device, &binarySize, (const unsigned char**)&programBinary, &binaryStatus,&errNum);
+
+    if (errNum != CL_SUCCESS)
+    {
+        printf("Error loading program binary.\n");
+        return NULL;
+    }
+
+    if (binaryStatus != CL_SUCCESS)
+    {
+        printf("Invalid binary for device,\n");
+        return NULL;
+    }
+
+
+    errNum = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    if (errNum != CL_SUCCESS)
+    {
+        // Determine the reason for the error
+        char buildLog[16384];
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, sizeof(buildLog), buildLog, NULL);
+
+        printf("CreateProgramFromBinary(): Error in kernel.\n");
+        //printf("%s\n", buildLog);
+        clReleaseProgram(program);
+        return NULL;
+    }
+
+    free(programBinary);
+    return program;
 }
