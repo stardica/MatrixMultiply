@@ -139,7 +139,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //print matrix
-    	printf("Matrix A\n");
+    	printf("Matrix A[]\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", A[i]);
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //print matrix
-	    printf("\n\nMatrix B\n");
+	    printf("\n\nMatrix B[]\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", B[i]);
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    printf("\n\nMatrix c\n");
+	    printf("\n\nMatrix C[] = A[] * B[]\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", C[i]);
