@@ -243,11 +243,11 @@ int main(int argc, char *argv[]){
 	    //terms of the total number of threads. The underlying OpenCL API
 	    //will look at the globalWorkSize and divide by the localWorkSize
 	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
-	    //Radeon 7870 has 20 CUs with 64 SIMD units per CU. I.e. 20 x 64 = 1280.
-	    GlobalWorkSize[0] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
-	    GlobalWorkSize[1] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
-	    LocalWorkSize[0] = SIZE; //SIZE Divide work items into groups of 64
-	    LocalWorkSize[1] = SIZE; //SIZE Divide work items into groups of 64
+
+	    GlobalWorkSize[0] = 16;//SIZE*SIZE*SIZE; // Process the entire lists
+	    GlobalWorkSize[1] = 16;//SIZE*SIZE*SIZE; // Process the entire lists
+	    LocalWorkSize[0] = 8; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[1] = 8; //SIZE Divide work items into groups of 64
 
 
 	    //used null for local, lets OpenCL determine the best local size.
