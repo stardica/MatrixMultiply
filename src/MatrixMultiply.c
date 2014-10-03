@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include "rdtsc.h"
-#include "/opt/AMDAPP/include/CL/cl.h"
+#include "CL/cl.h"
 #include <time.h>
 
 
@@ -15,7 +15,7 @@
 //MODE 3 = Stream Mode Matrix Multiply
 //MODE 4 = OpenCL Kernel Precompile
 
-#define SIZE 10
+#define SIZE 4
 #define MODE 3
 
 char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]){
 	    program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin.GPU" );
 	    if (program == NULL)
 	    {
-	    	printf("Failed to load kernel3 binary,\n");
+	    	printf("Failed to load kernel binary,\n");
 	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
@@ -244,10 +244,10 @@ int main(int argc, char *argv[]){
 	    //will look at the globalWorkSize and divide by the localWorkSize
 	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
 
-	    GlobalWorkSize[0] = 16;//SIZE*SIZE*SIZE; // Process the entire lists
-	    GlobalWorkSize[1] = 16;//SIZE*SIZE*SIZE; // Process the entire lists
-	    LocalWorkSize[0] = 8; //SIZE Divide work items into groups of 64
-	    LocalWorkSize[1] = 8; //SIZE Divide work items into groups of 64
+	    GlobalWorkSize[0] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
+	    GlobalWorkSize[1] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
+	    LocalWorkSize[0] = SIZE; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[1] = SIZE; //SIZE Divide work items into groups of 64
 
 
 	    //used null for local, lets OpenCL determine the best local size.
