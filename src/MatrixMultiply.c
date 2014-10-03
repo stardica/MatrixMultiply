@@ -5,7 +5,7 @@
 #include <string.h>
 #include "rdtsc.h"
 #include "/opt/AMDAPP/include/CL/cl.h"
-#include <math.h>
+#include <time.h>
 
 
 //SIZE sets height and width of matrix
@@ -15,12 +15,11 @@
 //MODE 3 = Stream Mode Matrix Multiply
 //MODE 4 = OpenCL Kernel Precompile
 
-#define SIZE 4
+#define SIZE 10
 #define MODE 3
 
 char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
 char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin";
-
 
 //1 if GPU 0 if CPU -1 if not set
 int CPUGPUFLAG = -1;
@@ -61,7 +60,7 @@ void LoadMatrices(void);
 void PrintMatrices(void);
 cl_context CreateContext(void);
 cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device);
-void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel, cl_mem memObjects[3]);
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel);
 cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName);
 bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName);
 cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName);
@@ -91,7 +90,7 @@ int main(int argc, char *argv[]){
 	    if (commandQueue == NULL)
 	    {
 	    	printf("Failed to create commandQueue.\n");
-	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
 
@@ -101,7 +100,7 @@ int main(int argc, char *argv[]){
 	    if (program == NULL)
 	    {
 	    	printf("Failed to create Program");
-	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
 
@@ -109,17 +108,16 @@ int main(int argc, char *argv[]){
 	    if (SaveProgramBinary(program, device, KERNELPATHOUT) == false)
 	    {
 	        printf("Failed to write program binary.\n");
-	        Cleanup(context, commandQueue, program, NULL, NULL);
+	        Cleanup(context, commandQueue, program, NULL);
 	        return 1;
 	     }
 
-	    printf("---Done---");
+	    //printf("---Done---");
 
-	    return 1;
+	    //return 1;
 
 
 	}
-
 
 	else if (MODE == 3){
 
@@ -139,7 +137,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //print matrix
-    	printf("Matrix A[]\n");
+    	printf("Matrix A[][]:\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", A[i]);
@@ -148,13 +146,14 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //print matrix
-	    printf("\n\nMatrix B[]\n");
+	    printf("\nMatrix B[][]:\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", B[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
 	    }
+
 
 	    //Get platform and device information
 	    cl_context context = 0;
@@ -178,7 +177,7 @@ int main(int argc, char *argv[]){
 	    if (commandQueue == NULL)
 	    {
 	    	printf("Failed to create command queue.\n");
-	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
 
@@ -189,22 +188,22 @@ int main(int argc, char *argv[]){
 	    if (program == NULL)
 	    {
 	    	printf("Failed to load kernel3 binary,\n");
-	    	Cleanup(context, commandQueue, program, NULL, NULL);
+	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
 
-	    //PRINANDTFLUSH
+
 
 	    // Create OpenCL kernel
 	    kernel = clCreateKernel(program, "Matrix", NULL);
 	    if (kernel == NULL)
 	    {
 	    	printf("Failed to create kernel.\n");
-	    	Cleanup(context, commandQueue, program, kernel, NULL);
+	    	Cleanup(context, commandQueue, program, NULL);
 	    	return 1;
 	    }
 
-	    //PRINANDTFLUSH
+
 
 	    cl_mem a_mem_obj = 0;
 	    cl_mem b_mem_obj = 0;
@@ -217,20 +216,17 @@ int main(int argc, char *argv[]){
 	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
 	    {
 	    	printf("Failed to create memory objects.\n");
-	    	Cleanup(context, commandQueue, program, kernel, NULL);
+	    	Cleanup(context, commandQueue, program, kernel);
 	    	return 1;
 	    }
-
-	    //PRINANDTFLUSH
 
 	    //Copy the lists A and B to their respective memory buffers
 	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), A, 0, NULL, NULL);
 	    clEnqueueWriteBuffer(commandQueue, b_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), B, 0, NULL, NULL);
 
-	    //PRINANDTFLUSH
 
 	    // Set the arguments of the kernel
-	    int size = SIZE;
+	    int *size = (int *)SIZE;
 	    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&c_mem_obj);
 	    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&a_mem_obj);
 	    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&b_mem_obj);
@@ -241,8 +237,6 @@ int main(int argc, char *argv[]){
 	    	return 1;
 	    }
 
-	    //PRINANDTFLUSH
-
 	    // Execute the OpenCL kernel on the list
 	    size_t GlobalWorkSize[2], LocalWorkSize[2];
 	    //Rember that in OpenCL we need to express the globalWorkSize in
@@ -250,12 +244,12 @@ int main(int argc, char *argv[]){
 	    //will look at the globalWorkSize and divide by the localWorkSize
 	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
 	    //Radeon 7870 has 20 CUs with 64 SIMD units per CU. I.e. 20 x 64 = 1280.
-	    GlobalWorkSize[0] = SIZE; // Process the entire lists
-	    GlobalWorkSize[1] = SIZE; // Process the entire lists
-	    LocalWorkSize[0] = SIZE; // Divide work items into groups of 64
-	    LocalWorkSize[1] = SIZE; // Divide work items into groups of 64
+	    GlobalWorkSize[0] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
+	    GlobalWorkSize[1] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
+	    LocalWorkSize[0] = SIZE; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[1] = SIZE; //SIZE Divide work items into groups of 64
 
-	    //PRINANDTFLUSH
+
 	    //used null for local, lets OpenCL determine the best local size.
 	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
 	    if (err != CL_SUCCESS)
@@ -264,7 +258,6 @@ int main(int argc, char *argv[]){
 	    	return 1;
 	    }
 
-	    //PRINANDTFLUSH
 
 	    //Read the memory buffer C on the device to the local variable C
 	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), C, 0, NULL, NULL);
@@ -277,7 +270,7 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    printf("\n\nMatrix C[] = A[] * B[]\n");
+	    printf("\nMatrix C[][] = A[][]*B[][]:\n");
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", C[i]);
@@ -288,7 +281,7 @@ int main(int argc, char *argv[]){
 	    // Clean up
 	    err = clFlush(commandQueue);
 	    err = clFinish(commandQueue);
-	    Cleanup(context, commandQueue, program, kernel, NULL);
+	    Cleanup(context, commandQueue, program, kernel);
 	    err = clReleaseMemObject(a_mem_obj);
 	    err = clReleaseMemObject(b_mem_obj);
 	    err = clReleaseMemObject(c_mem_obj);
@@ -296,7 +289,9 @@ int main(int argc, char *argv[]){
 	    free(B);
 	    free(C);
 
-		return 1;
+	    //printf("---Done---");
+
+	   // return 1;
 
 	}
 	else if (MODE == 2){
@@ -390,7 +385,7 @@ int main(int argc, char *argv[]){
 		PRINT(object_ptr->next, object_ptr->next);
 
 		//make sure the code ran all the way through.
-		printf("done\n");
+		//printf("done\n");
 
 	}
 	else
@@ -399,6 +394,8 @@ int main(int argc, char *argv[]){
 		printf("---Invalid Mode Set---\n\n");
 
 	}
+
+	printf("\n---Done---\n");
 	return 1;
 }
 
@@ -566,16 +563,9 @@ cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device)
     return commandQueue;
 }
 
-void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel, cl_mem memObjects[3]) {
+void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel) {
 
 
-	int i;
-
-	for (i = 0; i < 3; i++)
-    {
-        if (memObjects[i] != 0)
-            clReleaseMemObject(memObjects[i]);
-    }
     if (commandQueue != 0)
         clReleaseCommandQueue(commandQueue);
 
