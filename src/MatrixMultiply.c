@@ -384,8 +384,11 @@ int main(int argc, char *argv[]){
 		PRINT(object.next, object.next);
 		PRINT(object_ptr->next, object_ptr->next);
 
-		//make sure the code ran all the way through.
-		//printf("done\n");
+		int mmu_page_size = 1 << 12;
+
+		printf("mmu_papge_size = %d\n", mmu_page_size);
+
+
 
 	}
 	else
