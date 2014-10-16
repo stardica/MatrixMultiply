@@ -11,15 +11,30 @@
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
 //MODE 1 = single thread Matrix Multiply
-//MODE 2 = Multi thread Matrix Multiply
+//MODE 2 = Multi thread Matrix Multiply (max number is 19 pthread limit)
 //MODE 3 = Stream Mode Matrix Multiply
 //MODE 4 = OpenCL Kernel Precompile
 
-#define SIZE 4
+#define SIZE 16
 #define MODE 3
+
+//configure global and work sizes for stream mode
+//this is for SIZE 16
+#define GWS_0 16
+#define GWS_1 16
+#define LWS_0 8
+#define LWS_1 8
+
+//this is for SIZE 4
+//#define GWS_0 4
+//#define GWS_1 4
+//#define LWS_0 2
+//#define LWS_1 2
+
 
 char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
 char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin";
+char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
 int CPUGPUFLAG = -1;
@@ -136,8 +151,9 @@ int main(int argc, char *argv[]){
 	        A[i] = B[i] = rand() % 10 + 1;;
 	    }
 
+
 	    //print matrix
-    	printf("Matrix A[][]:\n");
+    	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", A[i]);
@@ -146,7 +162,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //print matrix
-	    printf("\nMatrix B[][]:\n");
+	    printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", B[i]);
@@ -184,7 +200,7 @@ int main(int argc, char *argv[]){
 	    //create the program from the binary
 	    //program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/Kernels/vector.cl.bin.GPU");
 	    //strcat(KERNELPATHOUT, ".GPU")
-	    program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin.GPU" );
+	    program = CreateProgramFromBinary(context, device, KERNEL);
 	    if (program == NULL)
 	    {
 	    	printf("Failed to load kernel binary,\n");
@@ -244,10 +260,11 @@ int main(int argc, char *argv[]){
 	    //will look at the globalWorkSize and divide by the localWorkSize
 	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
 
-	    GlobalWorkSize[0] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
-	    GlobalWorkSize[1] = SIZE;//SIZE*SIZE*SIZE; // Process the entire lists
-	    LocalWorkSize[0] = SIZE; //SIZE Divide work items into groups of 64
-	    LocalWorkSize[1] = SIZE; //SIZE Divide work items into groups of 64
+
+	    GlobalWorkSize[0] = GWS_0;//SIZE*SIZE*SIZE; // Process the entire lists
+	    GlobalWorkSize[1] = GWS_1;//SIZE*SIZE*SIZE; // Process the entire lists
+	    LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
 
 
 	    //used null for local, lets OpenCL determine the best local size.
@@ -270,7 +287,7 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    printf("\nMatrix C[][] = A[][]*B[][]:\n");
+	    printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", C[i]);
@@ -436,7 +453,7 @@ void PrintMatrices(void){
 	int i, j;
 
 	//Display output//////////////////////////
-	printf("Matrix A[][]:\n");
+	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	for (i=0;i<SIZE;i++){
 		for(j=0;j<SIZE;j++){
 	 		printf("%d ", matA[i][j]);
@@ -444,7 +461,9 @@ void PrintMatrices(void){
 	 	printf("\n");
 	}
 
-	 printf("\nMatrix B[][]:\n");
+	printf("\n");
+
+	 printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	 for (i=0;i<SIZE;i++){
 	 	for(j=0;j<SIZE;j++){
 	 		printf("%d ", matB[i][j]);
@@ -452,7 +471,7 @@ void PrintMatrices(void){
 		printf("\n");
 	 }
 
-	 printf("\nMatrix C[][] = A[][]*B[][]:\n");
+	 printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	 for (i=0;i<SIZE;i++){
 	 	for(j=0;j<SIZE;j++){
 	 		printf("%d ", matC[i][j]);
