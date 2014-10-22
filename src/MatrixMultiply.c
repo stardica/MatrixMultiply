@@ -10,20 +10,21 @@
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
-//MODE 1 = single thread Matrix Multiply
-//MODE 2 = Multi thread Matrix Multiply (max number is 19 pthread limit)
-//MODE 3 = Stream Mode Matrix Multiply
-//MODE 4 = OpenCL Kernel Precompile
+//MODE 1 = Single thread matrix multiply
+//MODE 2 = Multi thread matrix multiply (max number is 19 pthread limit)
+//MODE 3 = Stream mode matrix multiply via explicit memory copy
+//MODE 4 = Stream mode matrix multiply via pointers
+//MODE 5 = OpenCL kernel precompile
 
-#define SIZE 16
-#define MODE 3
+#define SIZE 4
+#define MODE 1
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 16
-#define GWS_1 16
-#define LWS_0 8
-#define LWS_1 8
+#define GWS_0 4
+#define GWS_1 4
+#define LWS_0 4
+#define LWS_1 4
 
 //this is for SIZE 4
 //#define GWS_0 4
@@ -45,7 +46,7 @@ int CPUGPUFLAG = -1;
 						fflush(stdout);
 
 typedef int bool;
-enum { false, true };
+enum {false, true};
 
 //objects
 struct Object{
@@ -86,7 +87,7 @@ cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, cons
 
 int main(int argc, char *argv[]){
 
-	if (MODE == 4){
+	if (MODE == 5){
 		cl_context context = 0;
 	    cl_command_queue commandQueue = 0;
 	    cl_program program = 0;
@@ -131,6 +132,10 @@ int main(int argc, char *argv[]){
 
 	    //return 1;
 
+	}
+	else if (MODE == 4){
+
+		printf("---Stream Mode Via Pointers---\n\n");
 
 	}
 
@@ -138,7 +143,7 @@ int main(int argc, char *argv[]){
 
 		//todo free remaining objects not passed to cleanup
 
-		printf("---Stream Mode---\n\n");
+		printf("---Stream Mode Via Explicit Memory Copy---\n\n");
 
 	    // Create the two input vectors
 	    int i;
