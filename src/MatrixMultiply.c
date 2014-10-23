@@ -12,12 +12,18 @@
 //MODE 0 = Test code
 //MODE 1 = Single thread matrix multiply
 //MODE 2 = Multi thread matrix multiply (max number is 19 pthread limit)
-//MODE 3 = Stream mode matrix multiply via explicit memory copy
-//MODE 4 = Stream mode matrix multiply via pointers
-//MODE 5 = OpenCL kernel precompile
+//MODE 3 = Stream mode. Make sure to check memory settings.
+//MODE 4 = OpenCL kernel precompile
 
 #define SIZE 4
-#define MODE 1
+#define MODE 3
+
+//LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
+//SYSMEM = 1 puts the cl_mem buffers in the system main memory hierarchy.
+//note: eighter or, don't active both the localmem and sysmem.
+
+#define LOCALMEM 1
+#define SYSMEM 0
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
@@ -25,12 +31,6 @@
 #define GWS_1 4
 #define LWS_0 4
 #define LWS_1 4
-
-//this is for SIZE 4
-//#define GWS_0 4
-//#define GWS_1 4
-//#define LWS_0 2
-//#define LWS_1 2
 
 
 char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
@@ -87,7 +87,7 @@ cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, cons
 
 int main(int argc, char *argv[]){
 
-	if (MODE == 5){
+	if (MODE == 4){
 		cl_context context = 0;
 	    cl_command_queue commandQueue = 0;
 	    cl_program program = 0;
@@ -133,17 +133,12 @@ int main(int argc, char *argv[]){
 	    //return 1;
 
 	}
-	else if (MODE == 4){
-
-		printf("---Stream Mode Via Pointers---\n\n");
-
-	}
 
 	else if (MODE == 3){
 
 		//todo free remaining objects not passed to cleanup
 
-		printf("---Stream Mode Via Explicit Memory Copy---\n\n");
+		printf("---Stream Mode---\n\n");
 
 	    // Create the two input vectors
 	    int i;
@@ -231,9 +226,22 @@ int main(int argc, char *argv[]){
 	    cl_mem c_mem_obj = 0;
 
   	    //Create memory buffers on the device for each vector
-	    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+
+
+
+	    if(LOCALMEM == 1)
+	    {
+		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    }
+	    else if (SYSMEM == 1){
+	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    }
+
+
 	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
 	    {
 	    	printf("Failed to create memory objects.\n");
@@ -260,11 +268,11 @@ int main(int argc, char *argv[]){
 
 	    // Execute the OpenCL kernel on the list
 	    size_t GlobalWorkSize[2], LocalWorkSize[2];
+
 	    //Rember that in OpenCL we need to express the globalWorkSize in
 	    //terms of the total number of threads. The underlying OpenCL API
 	    //will look at the globalWorkSize and divide by the localWorkSize
 	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
-
 
 	    GlobalWorkSize[0] = GWS_0;//SIZE*SIZE*SIZE; // Process the entire lists
 	    GlobalWorkSize[1] = GWS_1;//SIZE*SIZE*SIZE; // Process the entire lists
