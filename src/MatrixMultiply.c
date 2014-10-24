@@ -14,23 +14,26 @@
 //MODE 2 = Multi thread matrix multiply (max number is 19 pthread limit)
 //MODE 3 = Stream mode. Make sure to check memory settings.
 //MODE 4 = OpenCL kernel precompile
+//MODE 5 = OpenCL test code
 
 #define SIZE 4
-#define MODE 3
+#define MODE 5
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
 //SYSMEM = 1 puts the cl_mem buffers in the system main memory hierarchy.
+//CACHEDMEM = 1 caches the buffers?
 //note: eighter or, don't active both the localmem and sysmem.
 
-#define LOCALMEM 1
-#define SYSMEM 0
+#define CACHEDMEM 1
+#define LOCALMEM 0
+#define SYSMEM 1
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 4
-#define GWS_1 4
-#define LWS_0 4
-#define LWS_1 4
+#define GWS_0 SIZE
+#define GWS_1 SIZE
+#define LWS_0 NULL
+#define LWS_1 NULL
 
 
 char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
@@ -82,12 +85,158 @@ bool SaveProgramBinary(cl_program program, cl_device_id device, const char* file
 cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName);
 
 
-//Main///////////////////////////////
-//Brute force matrix multiplication
-
 int main(int argc, char *argv[]){
 
-	if (MODE == 4){
+	if (MODE == 5){
+
+		printf("---OpenCL Test Code---\n\n");
+
+
+		cl_int errNum;
+		cl_uint numPlatforms;
+		cl_platform_id *platforms = NULL;
+		cl_uint numDevices;
+		cl_device_id *devices = NULL;
+
+		//platform info fields
+		char vendor[1024], name[1024], version[1024];
+
+		//device info fields
+		size_t MAX_WORK_GROUP_SIZE;
+		cl_ulong GLOBAL_MEM_CACHE_SIZE, GLOBAL_MEM_SIZE, LOCAL_MEM_SIZE, GLOBAL_MEM_CACHELINE_SIZE;
+		cl_uint MAX_COMPUTE_UNITS, MAX_WORK_ITEM_DIMENSIONS;
+		size_t MAX_WORK_ITEM_SIZES[3];
+		char DEVICE_NAME[1024], DEVICE_VENDOR[1024], DEVICE_VERSION[1024], DRIVER_VERSION[1024];
+		cl_device_mem_cache_type GLOBAL_MEM_CACHE_TYPE;
+
+
+		//printf("Getting number of OpenCL Platforms...\n");
+		errNum = clGetPlatformIDs(0, NULL, &numPlatforms);
+		    if (errNum != CL_SUCCESS)
+		    {
+		        printf("Failed to get number of OpenCL platforms.\n");
+		        return 0;
+		    }
+		    else
+		    {
+
+		    	//printf("found %d.\n", numPlatforms);
+		    }
+
+		//printf("Allocating space for the platform info...\n");
+		platforms = (cl_platform_id *)malloc(numPlatforms*sizeof(cl_platform_id));
+
+		printf("---Platform Info---\n");
+		errNum = clGetPlatformIDs(numPlatforms, platforms, NULL);
+			if (errNum != CL_SUCCESS)
+			{
+				printf("Failed to get platform info.\n");
+				return 0;
+			}
+			else
+			{
+				clGetPlatformInfo (platforms[0], CL_PLATFORM_VENDOR, sizeof(vendor), vendor, NULL);
+				clGetPlatformInfo (platforms[0], CL_PLATFORM_NAME, sizeof(name), name, NULL);
+				clGetPlatformInfo (platforms[0], CL_PLATFORM_VERSION, sizeof(version), version, NULL);
+
+				//printf("Got platform info.\n");
+		    	printf("Vendor: \t%s\n", vendor);
+		    	printf("Name:   \t%s\n", name);
+		    	printf("Version:\t%s\n", version);
+
+		    }
+
+		//printf("Getting number of devices...\n");
+		errNum = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices);
+		if (errNum != CL_SUCCESS)
+		{
+			printf("Failed to get number of devices.\n");
+			return 0;
+		}
+		else
+		{
+	    	//printf("Found %d.\n", numDevices);
+	    }
+
+		//printf("Allocating space for device info...\n");
+		devices = (cl_device_id*)malloc(numDevices * sizeof(cl_device_id));
+
+		printf("\n---Device Info---");
+		errNum = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, numDevices, devices, NULL);
+		if (errNum != CL_SUCCESS)
+		{
+			printf("Failed to get device info.\n");
+			return 0;
+		}
+		else
+		{
+
+
+
+
+			int i, j = 0;
+			for (i = 0; i < numDevices; i++ )
+			{
+				printf("\nDevice ID: %d\n", i+1);
+				clGetDeviceInfo(devices[i], CL_DEVICE_NAME, sizeof(DEVICE_NAME), DEVICE_NAME, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_VENDOR, sizeof(DEVICE_VENDOR), DEVICE_VENDOR, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_VERSION, sizeof(DEVICE_VERSION), DEVICE_VERSION, NULL);
+				clGetDeviceInfo(devices[i], CL_DRIVER_VERSION, sizeof(DRIVER_VERSION), DRIVER_VERSION, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(MAX_COMPUTE_UNITS), &MAX_COMPUTE_UNITS, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(GLOBAL_MEM_SIZE), &GLOBAL_MEM_SIZE, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(LOCAL_MEM_SIZE), &LOCAL_MEM_SIZE, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(MAX_WORK_ITEM_DIMENSIONS), &MAX_WORK_ITEM_DIMENSIONS, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(MAX_WORK_ITEM_SIZES), MAX_WORK_ITEM_SIZES, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(MAX_WORK_GROUP_SIZE), &MAX_WORK_GROUP_SIZE, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(GLOBAL_MEM_CACHE_SIZE), &GLOBAL_MEM_CACHE_SIZE, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(GLOBAL_MEM_CACHELINE_SIZE), &GLOBAL_MEM_CACHELINE_SIZE, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_GLOBAL_MEM_CACHE_TYPE, sizeof(GLOBAL_MEM_CACHE_TYPE), &GLOBAL_MEM_CACHE_TYPE, NULL);
+
+
+				printf("Device Name:\t%s\n", DEVICE_NAME);
+				printf("Device Vendor:\t%s\n", DEVICE_VENDOR);
+				printf("Device Version:\t%s\n", DEVICE_VERSION);
+				printf("Driver Version:\t%s\n", DRIVER_VERSION);
+				printf("Number of CUs:\t%d\n", MAX_COMPUTE_UNITS);
+				printf("GMem:\t\t%lld (Bytes)\n", GLOBAL_MEM_SIZE);
+				printf("GMem $ Size:\t%lld (Bytes)\n", GLOBAL_MEM_CACHE_SIZE);
+				printf("GMem $ Line:\t%lld (Bytes)\n", GLOBAL_MEM_CACHELINE_SIZE);
+				if(GLOBAL_MEM_CACHE_TYPE == CL_NONE)
+				{
+					printf("GMem $ Type:\tCL_NONE\n");
+				}
+				else if(GLOBAL_MEM_CACHE_TYPE == CL_READ_ONLY_CACHE)
+				{
+					printf("GMem $ Type:\tCL_READ_ONLY_CACHE\n");
+				}
+
+				else if(GLOBAL_MEM_CACHE_TYPE == CL_READ_WRITE_CACHE)
+				{
+					printf("GMem $ Type:\tCL_READ_WRITE_CACHE\n");
+				}
+				printf("LMem:\t\t%lld (Bytes)\n", LOCAL_MEM_SIZE);
+				printf("Work Group Size:%d (Max)\n", MAX_WORK_GROUP_SIZE);
+				printf("Work Item Dim:\t%d (Max)\n", MAX_WORK_ITEM_DIMENSIONS);
+				printf("Work Item Size:\t");
+				for(j = 0; j < MAX_WORK_ITEM_DIMENSIONS; j ++)
+				{
+						if (j != (MAX_WORK_ITEM_DIMENSIONS -1))
+						printf("%d, ", MAX_WORK_ITEM_SIZES[j]);
+
+						if (j == (MAX_WORK_ITEM_DIMENSIONS -1))
+						printf("%d ", MAX_WORK_ITEM_SIZES[j]);
+				}
+				printf("(Max)\n");
+
+			}
+
+				//printf("Got device info.\n");
+		}
+
+
+	}
+
+	else if (MODE == 4){
 		cl_context context = 0;
 	    cl_command_queue commandQueue = 0;
 	    cl_program program = 0;
@@ -227,20 +376,27 @@ int main(int argc, char *argv[]){
 
   	    //Create memory buffers on the device for each vector
 
-
-
-	    if(LOCALMEM == 1)
+	    if(LOCALMEM == 1 && CACHEDMEM == 0)
 	    {
+	    	//this creates uncached buffers in the GPU's local memory
 		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    }
-	    else if (SYSMEM == 1){
+
+	    if (SYSMEM == 1 && CACHEDMEM == 0){
+	    	//this creates uncached buffers in the system memory.
 	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    }
 
+	    if (SYSMEM == 1 && CACHEDMEM == 1){
+	    	//this creates cached buffers in the system memory.
+	    	a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    }
 
 	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
 	    {
@@ -276,12 +432,13 @@ int main(int argc, char *argv[]){
 
 	    GlobalWorkSize[0] = GWS_0;//SIZE*SIZE*SIZE; // Process the entire lists
 	    GlobalWorkSize[1] = GWS_1;//SIZE*SIZE*SIZE; // Process the entire lists
-	    LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
-	    LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
+	    //LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
+	    //LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
 
 
 	    //used null for local, lets OpenCL determine the best local size.
-	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
+	    //err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
+	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, NULL, 0, NULL, NULL);
 	    if (err != CL_SUCCESS)
 	    {
 	    	printf("ND range not enqueued. Code: %d\n", err);
