@@ -4,9 +4,8 @@
 #include <time.h>
 #include <string.h>
 #include "rdtsc.h"
-#include "CL/cl.h"
+#include <CL/cl.h>
 #include <time.h>
-
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
@@ -17,27 +16,31 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 4
-#define MODE 5
+#define MODE 3
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
 //SYSMEM = 1 puts the cl_mem buffers in the system main memory hierarchy.
 //CACHEDMEM = 1 caches the buffers?
 //note: eighter or, don't active both the localmem and sysmem.
 
-#define CACHEDMEM 1
+#define CACHEDMEM 0
 #define LOCALMEM 0
 #define SYSMEM 1
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 SIZE
-#define GWS_1 SIZE
+#define GWS_0 4
+#define GWS_1 4
 #define LWS_0 NULL
 #define LWS_1 NULL
 
 
-char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
-char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin";
+//paths for the kernel compiler and the host code
+//char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin";
+//char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin.GPU";
+char KERNELPATHIN[] = "/home/stardica/Desktop/m2sBenchmarks/Rodinia/lud_kernel.cl";
+char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sBenchmarks/lud_release/lud_kernel.cl.bin";
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/Matrix.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
@@ -170,9 +173,6 @@ int main(int argc, char *argv[]){
 		}
 		else
 		{
-
-
-
 
 			int i, j = 0;
 			for (i = 0; i < numDevices; i++ )
