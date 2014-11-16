@@ -16,7 +16,7 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 4
-#define MODE 1
+#define MODE 3
 #define NOPRINTF 1
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -32,8 +32,8 @@
 //this is for SIZE 16
 #define GWS_0 4
 #define GWS_1 4
-#define LWS_0 NULL
-#define LWS_1 NULL
+#define LWS_0 4
+#define LWS_1 4
 
 
 //Compile and load matrix multiply kernel
@@ -326,6 +326,7 @@ int main(int argc, char *argv[]){
 	    int i;
 	    time_t t;
 	    srand((unsigned) time(&t));
+	    printf("\nHostside malloc(s)\n");
 	    int *A = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *B = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *C = (int*)malloc(sizeof(int)*(SIZE*SIZE));
@@ -335,22 +336,22 @@ int main(int argc, char *argv[]){
 
 
 	    //print matrix
-    	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
+    	/*printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", A[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }
+	    }*/
 
 	    //print matrix
-	    printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
+	   /* printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", B[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }
+	    }*/
 
 
 	    //Get platform and device information
@@ -363,6 +364,7 @@ int main(int argc, char *argv[]){
 	    //char *filepath = NULL;
 
 	    //Create the context
+	    printf("\nCreateContext\n");
 	    context = CreateContext();
 	    if (context == NULL)
 	    {
@@ -371,6 +373,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //Create a command-queue on the first device available on the created context
+	    printf("\nCreateCommandQueue\n");
 	    commandQueue = CreateCommandQueue(context, &device);
 	    if (commandQueue == NULL)
 	    {
@@ -382,6 +385,7 @@ int main(int argc, char *argv[]){
 	    //create the program from the binary
 	    //program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/Kernels/vector.cl.bin.GPU");
 	    //strcat(KERNELPATHOUT, ".GPU")
+	    printf("\nCreateProgramFromBinary\n");
 	    program = CreateProgramFromBinary(context, device, KERNEL);
 	    if (program == NULL)
 	    {
@@ -393,6 +397,7 @@ int main(int argc, char *argv[]){
 
 
 	    // Create OpenCL kernel
+	    printf("\nclCreateKernel\n");
 	    kernel = clCreateKernel(program, "Matrix", NULL);
 	    if (kernel == NULL)
 	    {
@@ -409,6 +414,7 @@ int main(int argc, char *argv[]){
 
   	    //Create memory buffers on the device for each vector
 
+	    printf("\nclCreateBuffer(s)\n");
 	    if(LOCALMEM == 1 && CACHEDMEM == 0)
 	    {
 	    	//this creates uncached buffers in the GPU's local memory
@@ -439,12 +445,14 @@ int main(int argc, char *argv[]){
 	    }
 
 	    //Copy the lists A and B to their respective memory buffers
+	    printf("\nclEnqueueWriteBuffer(s)\n");
 	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), A, 0, NULL, NULL);
 	    clEnqueueWriteBuffer(commandQueue, b_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), B, 0, NULL, NULL);
 
 
 	    // Set the arguments of the kernel
 	    int *size = (int *)SIZE;
+	    printf("\nclSetKernelArg(s)\n");
 	    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&c_mem_obj);
 	    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&a_mem_obj);
 	    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&b_mem_obj);
@@ -465,13 +473,14 @@ int main(int argc, char *argv[]){
 
 	    GlobalWorkSize[0] = GWS_0;//SIZE*SIZE*SIZE; // Process the entire lists
 	    GlobalWorkSize[1] = GWS_1;//SIZE*SIZE*SIZE; // Process the entire lists
-	    //LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
-	    //LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
+	    LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
 
 
 	    //used null for local, lets OpenCL determine the best local size.
 	    //err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
-	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, NULL, 0, NULL, NULL);
+	    printf("\nclEnqueueNDRangeKernel\n");
+	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
 	    if (err != CL_SUCCESS)
 	    {
 	    	printf("ND range not enqueued. Code: %d\n", err);
@@ -480,6 +489,7 @@ int main(int argc, char *argv[]){
 
 
 	    //Read the memory buffer C on the device to the local variable C
+	    printf("\nclEnqueueReadBuffer\n");
 	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), C, 0, NULL, NULL);
 	    if (err != CL_SUCCESS)
 	    {
@@ -490,13 +500,13 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
+	    /*printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%d ", C[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }
+	    }*/
 
 	    // Clean up
 	    err = clFlush(commandQueue);
