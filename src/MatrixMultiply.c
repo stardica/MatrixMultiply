@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include "rdtsc.h"
-#include <CL/cl.h>
 #include <time.h>
+#include <setjmp.h>
+
+#include <runtime/include/CL/cl.h>
+
+#include <rdtsc.h>
+
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
@@ -16,7 +20,8 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 16
-#define MODE 3
+#define MODE 1
+
 #define NOPRINTF 1
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -591,6 +596,8 @@ int main(int argc, char *argv[]){
 		printf("size of long is %d\n", sizeof(long));
 		printf("size of int is %d\n", sizeof(int));
 		printf("size of short is %d\n", sizeof(short));
+		printf("size of char * %d\n", sizeof(char *));
+		printf("size of unsigned int (word) %d\n", sizeof(unsigned int));
 
 		char *string = "test string";
 		printf("Here is the string 1: \"%s\"\n", string);
@@ -621,6 +628,29 @@ int main(int argc, char *argv[]){
 
 		printf("mmu_papge_size = %d\n", mmu_page_size);
 
+
+		//setjmp and longjmp fun
+		jmp_buf environment;
+		int i;
+
+		i = setjmp(environment);
+		printf("\n\nsetjmp returned = %d\n", i);
+
+		printf("Env 1:\n");
+
+		int x = 0;
+		for(x = 0; x < 6; x++)
+		{
+			printf("  %#x\n", environment[x]);
+		}
+
+
+		if (i < 3)
+		{
+			longjmp(environment, 3);
+		}
+
+		printf("longjmp finished with i = %d\n", i);
 
 
 	}
