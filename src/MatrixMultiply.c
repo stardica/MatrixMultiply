@@ -20,7 +20,7 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 16
-#define MODE 1
+#define MODE 3
 
 #define NOPRINTF 1
 
