@@ -22,7 +22,6 @@
 #define SIZE 16
 #define MODE 3
 
-#define NOPRINTF 1
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
 //SYSMEM = 1 puts the cl_mem buffers in the system main memory hierarchy.
@@ -344,19 +343,19 @@ int main(int argc, char *argv[]){
     	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
-	    	printf("%d ", A[i]);
+	    	printf("%3d ", A[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
 	    }
 
 	    //print matrix
-	   /* printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
+	   printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
-	    	printf("%d ", B[i]);
+	    	printf("%3d ", B[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }*/
+	    }
 
 
 	    //Get platform and device information
@@ -508,7 +507,7 @@ int main(int argc, char *argv[]){
 	    printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
-	    	printf("%d ", C[i]);
+	    	printf("%3d ", C[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
 	    }
@@ -580,10 +579,7 @@ int main(int argc, char *argv[]){
 			}
 		}
 
-		if (NOPRINTF == 0)
-		{
 			PrintMatrices();
-		}
 
 		//b = rdtsc();
 		//printf("\nDone. Number of clock Cycles: %llu\n", b-a);
@@ -702,17 +698,17 @@ void PrintMatrices(void){
 	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	for (i=0;i<SIZE;i++){
 		for(j=0;j<SIZE;j++){
-	 		printf("%d ", matA[i][j]);
+	 		printf("%3d ", matA[i][j]);
 	 	}
 	 	printf("\n");
 	}
 
 	printf("\n");
 
-	 printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
+	 printf("Matrix B[%d][%d]:\n", SIZE, SIZE);
 	 for (i=0;i<SIZE;i++){
 	 	for(j=0;j<SIZE;j++){
-	 		printf("%d ", matB[i][j]);
+	 		printf("%3d ", matB[i][j]);
 	 	}
 		printf("\n");
 	 }
@@ -752,6 +748,7 @@ cl_context CreateContext() {
     // simply choose the first available platform.  Normally, you would
     // query for all available platforms and select the most appropriate one.
     errNum = clGetPlatformIDs(1, &firstPlatformId, &numPlatforms);
+
     if (errNum != CL_SUCCESS || numPlatforms <= 0)
     {
         printf("Failed to find any OpenCL platforms.\n");
