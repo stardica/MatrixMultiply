@@ -20,7 +20,7 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 16
-#define MODE 3
+#define MODE 1
 
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
