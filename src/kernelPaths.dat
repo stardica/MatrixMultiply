@@ -1,0 +1,101 @@
+//Compile and load matrix multiply kernel
+char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl";
+char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin";
+
+//b+tree
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/b+tree/kernel/kernel_gpu_opencl.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/b+tree/kernel/kernel_gpu_opencl.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/b+tree/kernel/kernel_gpu_opencl_2.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/b+tree/kernel/btree_kernel2.cl.bin";
+
+//cfd
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/cfd/Kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/cfd/cfd_kernels.cl.bin";
+
+//dwt2d
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/dwt2d/com_dwt.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/dwt2d/dwt2d_kernel.cl.bin";
+
+//gaussian
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/gaussian/gaussianElim_kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/gaussian/gaussian_kernels.cl.bin";
+
+//heart wall
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/heartwall/kernel/kernel_gpu_opencl.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/heartwall/kernel/heartwall_kernel.cl.bin";
+
+//hybrid sort
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/bucketsort_kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/bucketsort_kernels.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/histogram1024.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/histogram1024_kernel.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/mergesort.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/hybridsort/mergesort_kernel.cl.bin";
+
+//LavaMD
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/lavaMD/kernel/kernel_gpu_opencl.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/lavaMD/kernel/lavaMD_kernel.cl.bin";
+
+//Leukocyte
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/find_ellipse_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/find_ellipse_kernel.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/track_ellipse_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/track_ellipse_kernel.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/track_ellipse_kernel_opt.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/leukocyte/OpenCL/track_ellipse_kernel_opt.cl.bin";
+
+//myocyte
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/myocyte/kernel/kernel_gpu_opencl.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/myocyte/kernel/myocyte_kernel.cl.bin";
+
+//nearest neighbor
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nn/nearestNeighbor_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nn/nearestNeighbor_kernel.cl.bin";
+
+//particlefilter
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particle_double.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particleDouble_kernel.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particle_naive.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particleNaive_kernel.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particle_single.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particleSingle_kernel.cl.bin";
+
+//pathfinder
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/pathfinder_kernels.cl.bin";
+
+//streamcluster
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/streamcluster/Kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/streamcluster/streamcluster_kernels.cl.bin";
+
+//LUD
+//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/LUD/src/lud_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/LUD/src/lud_kernel.cl.bin";
+
+//hotspot
+//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/HotSpot/src/hotspot_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/HotSpot/Release/hotspot_kernel.cl.bin";
+
+//BFS Kernel
+//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/BFS/src/bfs_kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/BFS/Release/bfs_kernels.cl.bin";
+
+//kmeans kernel
+//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl.bin";
+
+//back prop kernel
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/backprop/backprop_kernel.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/backprop/backprop_kernel.cl.bin";
+
+//Needleman-Wunsch kernel
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl.bin";
+
+//Needleman-Wunsch kernel
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl.bin";
+
+//Speckle-Reducing Anisotropic Diffusion
+//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/srad/kernel/kernel_gpu_opencl.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/srad/kernel/kernel_gpu_opencl.cl.bin";

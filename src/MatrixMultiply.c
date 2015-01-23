@@ -39,43 +39,7 @@
 #define LWS_0 8
 #define LWS_1 8
 
-
-//Compile and load matrix multiply kernel
-char KERNELPATHIN[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl";
-char KERNELPATHOUT[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin";
-
-//compile the Rodinia LUD kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/LUD/src/lud_kernel.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/LUD/src/lud_kernel.cl.bin";
-
-//compile hotspot kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/HotSpot/src/hotspot_kernel.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/HotSpot/Release/hotspot_kernel.cl.bin";
-
-//BFS Kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/BFS/src/bfs_kernels.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/BFS/Release/bfs_kernels.cl.bin";
-
-//kmeans kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl.bin";
-
-//back prop kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/backprop/backprop_kernel.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/backprop/backprop_kernel.cl.bin";
-
-//Needleman-Wunsch kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl.bin";
-
-//Needleman-Wunsch kernel
-//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/nw/nw.cl.bin";
-
-//Speckle-Reducing Anisotropic Diffusion
-//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/srad/kernel/kernel_gpu_opencl.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/srad/kernel/kernel_gpu_opencl.cl.bin";
-
+#include <kernelPaths.dat>
 
 //Kernel run path
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
