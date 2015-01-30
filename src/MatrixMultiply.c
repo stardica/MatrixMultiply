@@ -45,7 +45,7 @@
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
-int CPUGPUFLAG = -1;
+int CPUGPUFLAG = 1;
 
 //macros
 #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
@@ -724,23 +724,29 @@ cl_context CreateContext() {
     // a CPU-based context.
     cl_context_properties contextProperties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)firstPlatformId, 0 };
 
-    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU, NULL, NULL, &errNum);
-    CPUGPUFLAG = 1;
 
-    if (errNum != CL_SUCCESS)
+    if (CPUGPUFLAG == 1)
     {
-        printf("Could not create GPU context, trying CPU.\n");
-
-        context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU, NULL, NULL, &errNum);
-        CPUGPUFLAG = 0;
-
-        if (errNum != CL_SUCCESS)
-        {
-            printf("Failed to create an OpenCL GPU or CPU context.\n");
-            CPUGPUFLAG = -1;
-            return NULL;
-        }
+    	context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU, NULL, NULL, &errNum);
+    	if (errNum != CL_SUCCESS)
+    	{
+    		printf("Could not create GPU context.\n");
+    		return NULL;
+    	}
     }
+
+
+    if (CPUGPUFLAG == 0)
+    {
+    	context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU, NULL, NULL, &errNum);
+    	if (errNum != CL_SUCCESS)
+    	{
+    		printf("Failed to create an OpenCL GPU or CPU context.\n");
+    		return NULL;
+    	}
+
+    }
+
 
     return context;
 }
