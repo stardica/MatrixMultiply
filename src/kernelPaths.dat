@@ -61,8 +61,8 @@
 //char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/particlefilter/particleSingle_kernel.cl.bin";
 
 //pathfinder
-//char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/kernels.cl";
-//char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/pathfinder_kernels.cl.bin";
+char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/kernels.cl";
+char KERNELPATHOUT[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/pathfinder/pathfinder_kernels.cl.bin";
 
 //streamcluster
 //char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/streamcluster/Kernels.cl";
@@ -81,8 +81,8 @@
 //char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/BFS/Release/bfs_kernels.cl.bin";
 
 //kmeans kernel
-char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl";
-char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl.bin";
+//char KERNELPATHIN[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl";
+//char KERNELPATHOUT[] = "/home/stardica/Desktop/m2sRodiniaBenchmarks/Rodinia/OpenCL/KMeans/Release/kmeans_kernels.cl.bin";
 
 //back prop kernel
 //char KERNELPATHIN[] = "/home/stardica/Desktop/Benchmarks/Rodinia/rodinia_3.0/opencl/backprop/backprop_kernel.cl";

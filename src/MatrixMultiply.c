@@ -20,7 +20,7 @@
 //MODE 5 = OpenCL test code
 
 #define SIZE 16
-#define MODE 1
+#define MODE 4
 
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -45,7 +45,7 @@
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
-int CPUGPUFLAG = 1;
+int CPUGPUFLAG = 0;
 
 //macros
 #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
