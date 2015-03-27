@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <time.h>
 #include <setjmp.h>
+#include <sys/sysinfo.h>
+#include <stddef.h>
 
 #include <runtime/include/CL/cl.h>
 
@@ -18,9 +19,11 @@
 //MODE 3 = Stream mode. Make sure to check memory settings.
 //MODE 4 = OpenCL kernel precompile
 //MODE 5 = OpenCL test code
+// 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 16
-#define MODE 4
+#define SIZE 8
+#define MODE 3
+#define HSAMODE 0
 
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -34,8 +37,8 @@
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 16
-#define GWS_1 16
+#define GWS_0 8
+#define GWS_1 8
 #define LWS_0 8
 #define LWS_1 8
 
@@ -45,7 +48,7 @@
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
-int CPUGPUFLAG = 0;
+int CPUGPUFLAG = 1;
 
 //macros
 #define PRINT(...) printf("Print from the Macro: %p %p\n", __VA_ARGS__)
@@ -110,7 +113,7 @@ int main(int argc, char *argv[]){
 		cl_ulong GLOBAL_MEM_CACHE_SIZE, GLOBAL_MEM_SIZE, LOCAL_MEM_SIZE, GLOBAL_MEM_CACHELINE_SIZE;
 		cl_uint MAX_COMPUTE_UNITS, MAX_WORK_ITEM_DIMENSIONS;
 		size_t MAX_WORK_ITEM_SIZES[3];
-		char DEVICE_NAME[1024], DEVICE_VENDOR[1024], DEVICE_VERSION[1024], DRIVER_VERSION[1024];
+		char DEVICE_NAME[1024], DEVICE_VENDOR[1024], DEVICE_VERSION[1024], DRIVER_VERSION[1024], EXTENSIONS[2048];
 		cl_device_mem_cache_type GLOBAL_MEM_CACHE_TYPE;
 
 
@@ -183,6 +186,7 @@ int main(int argc, char *argv[]){
 				clGetDeviceInfo(devices[i], CL_DEVICE_VENDOR, sizeof(DEVICE_VENDOR), DEVICE_VENDOR, NULL);
 				clGetDeviceInfo(devices[i], CL_DEVICE_VERSION, sizeof(DEVICE_VERSION), DEVICE_VERSION, NULL);
 				clGetDeviceInfo(devices[i], CL_DRIVER_VERSION, sizeof(DRIVER_VERSION), DRIVER_VERSION, NULL);
+				clGetDeviceInfo(devices[i], CL_DEVICE_EXTENSIONS, sizeof(EXTENSIONS), EXTENSIONS, NULL);
 				clGetDeviceInfo(devices[i], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(MAX_COMPUTE_UNITS), &MAX_COMPUTE_UNITS, NULL);
 				clGetDeviceInfo(devices[i], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(GLOBAL_MEM_SIZE), &GLOBAL_MEM_SIZE, NULL);
 				clGetDeviceInfo(devices[i], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(LOCAL_MEM_SIZE), &LOCAL_MEM_SIZE, NULL);
@@ -198,6 +202,7 @@ int main(int argc, char *argv[]){
 				printf("Device Vendor:\t%s\n", DEVICE_VENDOR);
 				printf("Device Version:\t%s\n", DEVICE_VERSION);
 				printf("Driver Version:\t%s\n", DRIVER_VERSION);
+				printf("EXTENSIONS:\t%s\n", EXTENSIONS);
 				printf("Number of CUs:\t%d\n", MAX_COMPUTE_UNITS);
 				printf("GMem:\t\t%lld (Bytes)\n", GLOBAL_MEM_SIZE);
 				printf("GMem $ Size:\t%lld (Bytes)\n", GLOBAL_MEM_CACHE_SIZE);
@@ -288,16 +293,35 @@ int main(int argc, char *argv[]){
 
 		//todo free remaining objects not passed to cleanup
 
+		//profiling
+		int write_bytes = 0;
+		int read_bytes = 0;
+		/*unsigned long long start_cycles, stop_cycles;
+		unsigned long long start_setup, stop_setup;
+		unsigned long long start_write, stop_write;
+		unsigned long long start_read, stop_read;
+		unsigned long long start_finalize, stop_finalize;
+		struct timespec start_time_t, stop_time_t;*/
+
+
 		printf("---Stream Mode---\n\n");
+		//clock_gettime(CLOCK_MONOTONIC, &start_time_t);
+		//start_cycles = rdtsc();
+
+
+		int i;
+		time_t t;
+		srand((unsigned) time(&t));
 
 	    // Create the two input vectors
-	    int i;
-	    time_t t;
-	    srand((unsigned) time(&t));
 	    printf("\nHostside malloc(s)\n");
 	    int *A = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *B = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *C = (int*)malloc(sizeof(int)*(SIZE*SIZE));
+
+	    //profile
+	    //bytes += 3 * sizeof(int)*(SIZE*SIZE);
+
 	    for(i = 0; i < (SIZE*SIZE); i++) {
 	        A[i] = B[i] = rand() % 10 + 1;;
 	    }
@@ -392,7 +416,7 @@ int main(int argc, char *argv[]){
 	    }
 
 	    if (SYSMEM == 1 && CACHEDMEM == 0){
-	    	//this creates uncached buffers in the system memory.
+	    	//this creates uncached buffers in the system memory
 	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
 	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
@@ -414,8 +438,11 @@ int main(int argc, char *argv[]){
 
 	    //Copy the lists A and B to their respective memory buffers
 	    printf("\nclEnqueueWriteBuffer(s)\n");
+	    write_bytes += 2 * sizeof(int)*(SIZE*SIZE);
+	   // start_write = rdtsc();
 	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), A, 0, NULL, NULL);
 	    clEnqueueWriteBuffer(commandQueue, b_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), B, 0, NULL, NULL);
+	   // stop_write = rdtsc();
 
 
 	    // Set the arguments of the kernel
@@ -458,7 +485,10 @@ int main(int argc, char *argv[]){
 
 	    //Read the memory buffer C on the device to the local variable C
 	    printf("\nclEnqueueReadBuffer\n");
+	    read_bytes += sizeof(int)*(SIZE*SIZE);
+	    //start_read = rdtsc();
 	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), C, 0, NULL, NULL);
+	   // stop_read = rdtsc();
 	    if (err != CL_SUCCESS)
 	    {
 	    	printf("Buffer not returned.\n");
@@ -489,7 +519,22 @@ int main(int argc, char *argv[]){
 
 	    //printf("---Done---");
 
-	   // return 1;
+
+
+	    /*stop_cycles = rdtsc();
+	    clock_gettime(CLOCK_MONOTONIC, &stop_time_t);
+	    printf("Total cycles = %llu\n", (stop_cycles - start_cycles));
+
+	    long int time_s = stop_time_t.tv_nsec - start_time_t.tv_nsec;
+	    printf("Approximate runtime (check) = %ld ms\n", (time_s/1000000));
+
+	    printf("Bytes written %d\n", write_bytes);
+	    printf("transfer cycles = %llu\n", (stop_write - start_write));
+	    printf("start at = %llu\n", (start_write - start_cycles));
+
+	    printf("Bytes read %d\n", read_bytes);
+	    printf("transfer cycles = %llu\n", (stop_read - start_read));
+	    printf("start at = %llu\n", (start_read - start_cycles));*/
 
 	}
 	else if (MODE == 2){
