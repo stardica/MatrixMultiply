@@ -1,0 +1,19 @@
+How to set up eclipse to compile and run m2s-cpu
+
+(1) Start a new c project drag/import all of the files folders.
+
+(2) Go to project properties add the following compiler settings:
+	(a) Add the following to the includes list
+		(i) /home/stardica/Desktop/MatrixMultiply/src
+		(ii)/home/stardica/Desktop/runtime/src
+	(b) Add -pthread to miscellaneous >> other flags
+
+(3) Go to project properties add the following linker settings
+	(a) Add pthread, rt, m2s-opencl to the libraries.
+	(b) Add /home/stardica/Desktop/runtime/Release to the library search path
+
+Don't forget to eigther
+	(a) export LD_LIBRARY_PATH=/home/stardica/Desktop/runtime/Release
+	(b) install the m2s-opencl library.
+
+compile and run with correct command line arguments.
