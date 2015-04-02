@@ -22,7 +22,7 @@
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
 #define SIZE 8
-#define MODE 3
+#define MODE 1
 #define HSAMODE 0
 
 
