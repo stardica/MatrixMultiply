@@ -21,8 +21,8 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 8
-#define MODE 1
+#define SIZE 16
+#define MODE 2
 #define HSAMODE 0
 
 
