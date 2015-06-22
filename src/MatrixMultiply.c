@@ -7,10 +7,11 @@
 #include <sys/sysinfo.h>
 #include <stddef.h>
 
-#include <runtime/include/CL/cl.h>
+#include <CL/cl.h>
 
-#include <rdtsc.h>
+#include "rdtsc.h"
 
+#include "kernelPaths.dat"
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
@@ -21,10 +22,9 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 16
-#define MODE 2
+#define SIZE 32
+#define MODE 3
 #define HSAMODE 0
-
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
 //SYSMEM = 1 puts the cl_mem buffers in the system main memory hierarchy.
@@ -37,12 +37,12 @@
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 8
-#define GWS_1 8
-#define LWS_0 8
-#define LWS_1 8
+#define GWS_0 32
+#define GWS_1 32
+#define LWS_0 16
+#define LWS_1 16
 
-#include <kernelPaths.dat>
+
 
 //Kernel run path
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
@@ -363,6 +363,8 @@ int main(int argc, char *argv[]){
 	    	printf("Failed to create OpenCL context.\n");
 	    	return 1;
 	    }
+
+	    printf("\nEnd CreateContext\n");
 
 	    //Create a command-queue on the first device available on the created context
 	    printf("\nCreateCommandQueue\n");
@@ -756,13 +758,20 @@ cl_context CreateContext() {
     // First, select an OpenCL platform to run on.  For this example, we
     // simply choose the first available platform.  Normally, you would
     // query for all available platforms and select the most appropriate one.
+
+
+
     errNum = clGetPlatformIDs(1, &firstPlatformId, &numPlatforms);
+
+
 
     if (errNum != CL_SUCCESS || numPlatforms <= 0)
     {
         printf("Failed to find any OpenCL platforms.\n");
         return NULL;
     }
+
+
 
     // Next, create an OpenCL context on the platform.  Attempt to
     // create a GPU-based context, and if that fails, try to create
