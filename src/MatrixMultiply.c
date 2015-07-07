@@ -22,8 +22,8 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 32
-#define MODE 3
+#define SIZE 128
+#define MODE 1
 #define HSAMODE 0
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -37,8 +37,8 @@
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 32
-#define GWS_1 32
+#define GWS_0 128
+#define GWS_1 128
 #define LWS_0 16
 #define LWS_1 16
 
@@ -322,14 +322,15 @@ int main(int argc, char *argv[]){
 	    //profile
 	    //bytes += 3 * sizeof(int)*(SIZE*SIZE);
 
+	     printf("\nHostside mat init\n");
 	    for(i = 0; i < (SIZE*SIZE); i++) {
 	        A[i] = B[i] = rand() % 10 + 1;;
 	    }
 
 
 	    //print matrix
-    	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
-	    for(i = 0; i < (SIZE*SIZE); i++)
+    	 /*printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
+	   	 for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", A[i]);
 	        if(((i + 1) % SIZE) == 0)
@@ -343,7 +344,7 @@ int main(int argc, char *argv[]){
 	    	printf("%3d ", B[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }
+	    }*/
 
 
 	    //Get platform and device information
@@ -500,15 +501,15 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
+	   /* printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", C[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }
+	    }*/
 
-	    // Clean up
+	     printf("\nHostside clean up\n");
 	    err = clFlush(commandQueue);
 	    err = clFinish(commandQueue);
 	    Cleanup(context, commandQueue, program, kernel);

@@ -92,7 +92,7 @@
 								<option id="gnu.c.compiler.option.dialect.std.219184116" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1807743975" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/stardica/Desktop/MatrixMultiply/src"/>
-									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/src"/>
+									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/src/runtime/include"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1198773443" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-pthread -c -fmessage-length=0" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.435995386" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
