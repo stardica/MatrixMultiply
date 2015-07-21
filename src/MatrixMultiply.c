@@ -22,8 +22,8 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 128
-#define MODE 1
+#define SIZE 16
+#define MODE 2
 #define HSAMODE 0
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -565,7 +565,6 @@ int main(int argc, char *argv[]){
 		//Join threads////////////////////////////
 		for (i=0;i<(SIZE*SIZE);i++){
 			pthread_join(tid[i], NULL);
-			//printf("Thread join %d", i);
 		}
 
 		PrintMatrices();
@@ -747,6 +746,7 @@ void *RowColumnMultiply(void *data){
 
 	//assign the sum to its coordinate
 	matC[RCData->RowNum][RCData->ColumnNum] = SumOfProducts;
+	free(data);
 	pthread_exit(0);
 }
 
