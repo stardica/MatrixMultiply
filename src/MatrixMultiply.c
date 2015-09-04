@@ -22,7 +22,7 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 16
+#define SIZE 8
 #define MODE 2
 #define HSAMODE 0
 
@@ -37,12 +37,10 @@
 
 //configure global and work sizes for stream mode
 //this is for SIZE 16
-#define GWS_0 128
-#define GWS_1 128
+#define GWS_0 32
+#define GWS_1 32
 #define LWS_0 16
 #define LWS_1 16
-
-
 
 //Kernel run path
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
@@ -304,7 +302,7 @@ int main(int argc, char *argv[]){
 		struct timespec start_time_t, stop_time_t;*/
 
 
-		printf("---Stream Mode---\n\n");
+		printf("Stream Mode\n\n");
 		//clock_gettime(CLOCK_MONOTONIC, &start_time_t);
 		//start_cycles = rdtsc();
 
@@ -329,7 +327,7 @@ int main(int argc, char *argv[]){
 
 
 	    //print matrix
-    	 /*printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
+    	/* printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
 	   	 for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", A[i]);
@@ -501,7 +499,7 @@ int main(int argc, char *argv[]){
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
 	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	   /* printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
+	    /*printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", C[i]);
@@ -542,7 +540,7 @@ int main(int argc, char *argv[]){
 	}
 	else if (MODE == 2){
 
-		printf("---Multi Thread Mode---\n\n");
+		printf("Multi Thread Mode\n\n");
 		int i, j, k;
 
 		LoadMatrices();
@@ -571,7 +569,7 @@ int main(int argc, char *argv[]){
 	}
 	else if (MODE == 1){
 
-		printf("---Single Thread Mode---\n\n");
+		printf("Single Thread Mode\n\n");
 		//unsigned long long a, b;
 		//a = rdtsc();
 		//time_t t;
