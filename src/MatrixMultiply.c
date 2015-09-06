@@ -6,6 +6,7 @@
 #include <setjmp.h>
 #include <sys/sysinfo.h>
 #include <stddef.h>
+#include <assert.h>
 
 #include <CL/cl.h>
 
@@ -86,7 +87,7 @@ cl_context CreateContext(void);
 cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *device);
 void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program program, cl_kernel kernel);
 cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName);
-bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName);
+bool SaveProgramBinary(cl_program program, cl_device_id device, char* fileName);
 cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName);
 
 
@@ -635,7 +636,7 @@ int main(int argc, char *argv[]){
 
 
 		//setjmp and longjmp fun
-		jmp_buf environment;
+		/*jmp_buf environment;
 		int i;
 
 		i = setjmp(environment);
@@ -646,7 +647,7 @@ int main(int argc, char *argv[]){
 		int x = 0;
 		for(x = 0; x < 6; x++)
 		{
-			printf("  %#x\n", environment[x]);
+			printf("  %x\n", environment[x]);
 		}
 
 
@@ -655,7 +656,7 @@ int main(int argc, char *argv[]){
 			longjmp(environment, 3);
 		}
 
-		printf("longjmp finished with i = %d\n", i);
+		printf("longjmp finished with i = %d\n", i);*/
 
 
 	}
@@ -895,7 +896,10 @@ cl_program CreateProgram(cl_context context, cl_device_id device, const char* fi
     fseek(fp, 0L, SEEK_SET);
 
     buffer = (char *) malloc(length + 1);
-    fread(buffer, 1, length, fp);
+
+    int elems = 0;
+    elems = fread(buffer, 1, length, fp);
+    assert(elems);
     //ftell is bad. Sometimes you get garbage at the end of the string.
     //add 0 to the end to terminate the string correctly.
     buffer[length] = 0;
@@ -925,7 +929,7 @@ cl_program CreateProgram(cl_context context, cl_device_id device, const char* fi
     return program;
 }
 
-bool SaveProgramBinary(cl_program program, cl_device_id device, const char* fileName){
+bool SaveProgramBinary(cl_program program, cl_device_id device, char* fileName){
 
 	cl_uint numDevices = 0;
     cl_int errNum;
@@ -1042,7 +1046,9 @@ cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, cons
     unsigned char *programBinary;
     programBinary = (unsigned char *) malloc(sizeof(unsigned char[binarySize]));
 
-    fread(programBinary, 1, binarySize, fp);
+    int elems = 0;
+    elems = fread(programBinary, 1, binarySize, fp);
+    assert(elems);
     fclose(fp);
 
     cl_int errNum = 0;
