@@ -17,3 +17,10 @@ Don't forget to eigther
 	(b) install the m2s-opencl library.
 
 compile and run with correct command line arguments.
+
+
+(4) to compile static...
+	(a) any linked libraries must be in the libname.a format. Its easy to forget this, make sure you are not linking to a libname.so file.
+	(b) under GCC C Linked general settings check the static box.
+	(c) order matters for library includes. all libraries must be included in the order that other libraries are referenced.
+		i.e. if your custom library includes pthreads you must have pthreads AFTER your custom library.
