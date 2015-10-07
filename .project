@@ -3,6 +3,7 @@
 	<name>MatrixMultiply</name>
 	<comment></comment>
 	<projects>
+		<project>runtime</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

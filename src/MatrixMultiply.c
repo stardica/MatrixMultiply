@@ -541,7 +541,7 @@ int main(int argc, char *argv[]){
 	}
 	else if (MODE == 2){
 
-		printf("Multi Thread Mode\n\n");
+		printf("Multi Thread Mode\n");
 		int i, j, k;
 
 		LoadMatrices();
@@ -589,7 +589,7 @@ int main(int argc, char *argv[]){
 			}
 		}
 
-			PrintMatrices();
+		PrintMatrices();
 
 		//b = rdtsc();
 		//printf("\nDone. Number of clock Cycles: %llu\n", b-a);
