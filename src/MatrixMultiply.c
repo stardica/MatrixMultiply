@@ -37,9 +37,8 @@
 #define SYSMEM 1
 
 //configure global and work sizes for stream mode
-//this is for SIZE 16
-#define GWS_0 32
-#define GWS_1 32
+#define GWS_0 512
+#define GWS_1 512
 #define LWS_0 16
 #define LWS_1 16
 
@@ -314,6 +313,7 @@ int main(int argc, char *argv[]){
 
 	    // Create the two input vectors
 	    printf("\nHostside malloc(s)\n");
+	    fflush(stdout);
 	    int *A = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *B = (int*)malloc(sizeof(int)*(SIZE*SIZE));
 	    int *C = (int*)malloc(sizeof(int)*(SIZE*SIZE));
@@ -321,7 +321,8 @@ int main(int argc, char *argv[]){
 	    //profile
 	    //bytes += 3 * sizeof(int)*(SIZE*SIZE);
 
-	     printf("\nHostside mat init\n");
+	    printf("\nHostside mat init\n");
+	    fflush(stdout);
 	    for(i = 0; i < (SIZE*SIZE); i++) {
 	        A[i] = B[i] = rand() % 10 + 1;;
 	    }
@@ -357,6 +358,7 @@ int main(int argc, char *argv[]){
 
 	    //Create the context
 	    printf("\nCreateContext\n");
+	    fflush(stdout);
 	    context = CreateContext();
 	    if (context == NULL)
 	    {
@@ -365,9 +367,11 @@ int main(int argc, char *argv[]){
 	    }
 
 	    printf("\nEnd CreateContext\n");
+	    fflush(stdout);
 
 	    //Create a command-queue on the first device available on the created context
 	    printf("\nCreateCommandQueue\n");
+	    fflush(stdout);
 	    commandQueue = CreateCommandQueue(context, &device);
 	    if (commandQueue == NULL)
 	    {
@@ -380,6 +384,7 @@ int main(int argc, char *argv[]){
 	    //program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/Kernels/vector.cl.bin.GPU");
 	    //strcat(KERNELPATHOUT, ".GPU")
 	    printf("\nCreateProgramFromBinary\n");
+	    fflush(stdout);
 	    program = CreateProgramFromBinary(context, device, KERNEL);
 	    if (program == NULL)
 	    {
@@ -392,6 +397,7 @@ int main(int argc, char *argv[]){
 
 	    // Create OpenCL kernel
 	    printf("\nclCreateKernel\n");
+	    fflush(stdout);
 	    kernel = clCreateKernel(program, "Matrix", NULL);
 	    if (kernel == NULL)
 	    {
@@ -400,8 +406,6 @@ int main(int argc, char *argv[]){
 	    	return 1;
 	    }
 
-
-
 	    cl_mem a_mem_obj = 0;
 	    cl_mem b_mem_obj = 0;
 	    cl_mem c_mem_obj = 0;
@@ -409,6 +413,7 @@ int main(int argc, char *argv[]){
   	    //Create memory buffers on the device for each vector
 
 	    printf("\nclCreateBuffer(s)\n");
+	    fflush(stdout);
 	    if(LOCALMEM == 1 && CACHEDMEM == 0)
 	    {
 	    	//this creates uncached buffers in the GPU's local memory
@@ -440,6 +445,7 @@ int main(int argc, char *argv[]){
 
 	    //Copy the lists A and B to their respective memory buffers
 	    printf("\nclEnqueueWriteBuffer(s)\n");
+	    fflush(stdout);
 	    write_bytes += 2 * sizeof(int)*(SIZE*SIZE);
 	   // start_write = rdtsc();
 	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), A, 0, NULL, NULL);
@@ -450,6 +456,7 @@ int main(int argc, char *argv[]){
 	    // Set the arguments of the kernel
 	    int *size = (int *)SIZE;
 	    printf("\nclSetKernelArg(s)\n");
+	    fflush(stdout);
 	    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&c_mem_obj);
 	    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&a_mem_obj);
 	    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&b_mem_obj);
@@ -477,6 +484,7 @@ int main(int argc, char *argv[]){
 	    //used null for local, lets OpenCL determine the best local size.
 	    //err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
 	    printf("\nclEnqueueNDRangeKernel\n");
+	    fflush(stdout);
 	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
 	    if (err != CL_SUCCESS)
 	    {
@@ -487,6 +495,7 @@ int main(int argc, char *argv[]){
 
 	    //Read the memory buffer C on the device to the local variable C
 	    printf("\nclEnqueueReadBuffer\n");
+	    fflush(stdout);
 	    read_bytes += sizeof(int)*(SIZE*SIZE);
 	    //start_read = rdtsc();
 	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), C, 0, NULL, NULL);
@@ -508,7 +517,8 @@ int main(int argc, char *argv[]){
 	        printf("\n");
 	    }*/
 
-	     printf("\nHostside clean up\n");
+	    printf("\nHostside clean up\n");
+	    fflush(stdout);
 	    err = clFlush(commandQueue);
 	    err = clFinish(commandQueue);
 	    Cleanup(context, commandQueue, program, kernel);
@@ -589,7 +599,7 @@ int main(int argc, char *argv[]){
 			}
 		}
 
-		PrintMatrices();
+		//PrintMatrices();
 
 		//b = rdtsc();
 		//printf("\nDone. Number of clock Cycles: %llu\n", b-a);
