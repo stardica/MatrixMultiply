@@ -23,7 +23,7 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 8
+#define SIZE 64
 #define MODE 2
 #define HSAMODE 0
 
@@ -417,23 +417,23 @@ int main(int argc, char *argv[]){
 	    if(LOCALMEM == 1 && CACHEDMEM == 0)
 	    {
 	    	//this creates uncached buffers in the GPU's local memory
-		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
 	    }
 
 	    if (SYSMEM == 1 && CACHEDMEM == 0){
 	    	//this creates uncached buffers in the system memory
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
 	    }
 
 	    if (SYSMEM == 1 && CACHEDMEM == 1){
 	    	//this creates cached buffers in the system memory.
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+	    	a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
 	    }
 
 	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
