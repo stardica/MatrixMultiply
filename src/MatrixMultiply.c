@@ -8,11 +8,17 @@
 #include <stddef.h>
 #include <assert.h>
 
+#include <unistd.h>
+
 #include <CL/cl.h>
 
 #include "rdtsc.h"
 
 #include "kernelPaths.dat"
+
+
+#define STATS_START 325
+#define STATS_STOP 326
 
 //SIZE sets height and width of matrix
 //MODE 0 = Test code
@@ -23,8 +29,8 @@
 //MODE 5 = OpenCL test code
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 64
-#define MODE 2
+#define SIZE 32
+#define MODE 3
 #define HSAMODE 0
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -33,14 +39,14 @@
 //note: eighter or, don't active both the localmem and sysmem.
 
 #define CACHEDMEM 0
-#define LOCALMEM 0
-#define SYSMEM 1
+#define LOCALMEM 1
+#define SYSMEM 0
 
 //configure global and work sizes for stream mode
-#define GWS_0 512
-#define GWS_1 512
-#define LWS_0 16
-#define LWS_1 16
+#define GWS_0 32
+#define GWS_1 32
+#define LWS_0 8
+#define LWS_1 8
 
 //Kernel run path
 char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
@@ -346,6 +352,8 @@ int main(int argc, char *argv[]){
 	        printf("\n");
 	    }*/
 
+	    //syscall(STATS_START);
+
 
 	    //Get platform and device information
 	    cl_context context = 0;
@@ -505,6 +513,8 @@ int main(int argc, char *argv[]){
 	    	printf("Buffer not returned.\n");
 	    	return 1;
 	    }
+
+	    //syscall(STATS_STOP);
 
 	    //print matrix
 	    //for 2 x 2 should be 2, 3, 6, 11
