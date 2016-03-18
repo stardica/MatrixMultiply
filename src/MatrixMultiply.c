@@ -17,7 +17,7 @@
 #include "kernelPaths.dat"
 
 
-#define STATS_START 325
+#define STATS_RESET 325
 #define STATS_STOP 326
 
 //SIZE sets height and width of matrix
@@ -352,7 +352,8 @@ int main(int argc, char *argv[]){
 	        printf("\n");
 	    }*/
 
-	    //syscall(STATS_START);
+
+	    syscall(STATS_RESET);
 
 
 	    //Get platform and device information
