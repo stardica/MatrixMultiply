@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -7,6 +9,8 @@
 #include <sys/sysinfo.h>
 #include <stddef.h>
 #include <assert.h>
+
+#include <sched.h>
 
 #include <unistd.h>
 
@@ -30,8 +34,8 @@
 //MODE 6 = Stream and multi-thread combined
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
-#define SIZE 8
-#define MODE 6
+#define SIZE 16
+#define MODE 2
 #define HSAMODE 0
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -95,6 +99,15 @@ void Cleanup(cl_context context, cl_command_queue commandQueue, cl_program progr
 cl_program CreateProgram(cl_context context, cl_device_id device, const char* fileName);
 bool SaveProgramBinary(cl_program program, cl_device_id device, char* fileName);
 cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, const char* fileName);
+
+cpu_set_t  mask;
+
+inline void assignToThisCore(int core_id)
+{
+    CPU_ZERO(&mask);
+    CPU_SET(core_id, &mask);
+    sched_setaffinity(0, sizeof(mask), &mask);
+}
 
 
 int main(int argc, char *argv[]){
@@ -826,6 +839,13 @@ int main(int argc, char *argv[]){
 	}
 	else if (MODE == 2){
 
+		//cal this:
+		assignToThisCore(0);//assign to core 0,1,2,...
+
+		unsigned long long a, b;
+		a = rdtsc();
+		printf("\nstart clock Cycles: %llu\n", a);
+
 		printf("Multi Thread Mode\n");
 		int i, j, k;
 
@@ -835,6 +855,9 @@ int main(int argc, char *argv[]){
 
 		//start our threads
 		k=0;
+
+		syscall(BEGIN_PARALLEL_SECTION);
+
 		for(i=0;i<SIZE;i++){
 			for(j=0;j<SIZE;j++){
 				struct RowColumnData *RCData = (struct RowColumnData *) malloc(sizeof(struct RowColumnData));
@@ -851,7 +874,17 @@ int main(int argc, char *argv[]){
 			pthread_join(tid[i], NULL);
 		}
 
-		PrintMatrices();
+		getchar();
+
+		syscall(END_PARALLEL_SECTION);
+
+		b = rdtsc();
+		printf("\nend clock Cycles: %llu\n", b);
+		printf("\nDone. Number of clock Cycles: %llu\n", b-a);
+
+		//PrintMatrices();
+
+
 	}
 	else if (MODE == 1){
 

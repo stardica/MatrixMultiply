@@ -91,10 +91,12 @@
 								<option id="gnu.c.compiler.exe.release.option.debugging.level.1674710322" name="Debug Level" superClass="gnu.c.compiler.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.dialect.std.219184116" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1807743975" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/stardica/Desktop/MatrixMultiply/src"/>
-									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/src/runtime/include"/>
+									<listOptionValue builtIn="false" value="/home/stardica/Dropbox/CDA7919DoctoralResearch/MatrixMultiply/src"/>
+									<listOptionValue builtIn="false" value="/home/stardica/Dropbox/CDA7919DoctoralResearch/runtime/src/runtime/include"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.1198773443" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-m32 -pthread -c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.c.compiler.option.warnings.toerrors.778161628" name="Warnings as errors (-Werror)" superClass="gnu.c.compiler.option.warnings.toerrors" value="true" valueType="boolean"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.2145914578" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.435995386" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool command="gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.c.linker.exe.release.1350528664" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release">
@@ -105,7 +107,7 @@
 									<listOptionValue builtIn="false" value="rt"/>
 								</option>
 								<option id="gnu.c.link.option.paths.150865227" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="/home/stardica/Desktop/runtime/Release_Static"/>
+									<listOptionValue builtIn="false" value="/home/stardica/Dropbox/CDA7919DoctoralResearch/runtime/Release_Static"/>
 								</option>
 								<option id="gnu.c.link.option.noshared.1430040324" name="No shared libraries (-static)" superClass="gnu.c.link.option.noshared" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.ldflags.1651359948" name="Linker flags" superClass="gnu.c.link.option.ldflags" value="-m32" valueType="string"/>
@@ -121,6 +123,20 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.exe.release.1516621713.361721678" name="MatrixMultiply.c" rcbsApplicability="disable" resourcePath="src/MatrixMultiply.c" toolsToInvoke="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1860605522.414341697">
+						<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1860605522.414341697" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release.1860605522">
+							<option id="gnu.c.compiler.option.preprocessor.def.symbols.761705011" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
+								<listOptionValue builtIn="false" value="__USE_GNU"/>
+							</option>
+							<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.123504495" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+						</tool>
+						<tool customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.1763829740" name="Resource Custom Build Step">
+							<inputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.inputtype.1591737646" name="Resource Custom Build Step Input Type">
+								<additionalInput kind="additionalinputdependency" paths=""/>
+							</inputType>
+							<outputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.outputtype.1809921701" name="Resource Custom Build Step Output Type"/>
+						</tool>
+					</fileInfo>
 					<sourceEntries>
 						<entry excluding="src/lud.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
