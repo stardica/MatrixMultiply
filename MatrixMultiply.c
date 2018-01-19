@@ -9,15 +9,14 @@
 #include <sys/sysinfo.h>
 #include <stddef.h>
 #include <assert.h>
-
+#include <sys/types.h>
+#include <math.h>
 #include <sched.h>
-
 #include <unistd.h>
 
 #include <CL/cl.h>
 
 #include "rdtsc.h"
-
 #include "kernelPaths.dat"
 
 
@@ -34,8 +33,11 @@
 //MODE 6 = Stream and multi-thread combined
 // 0/1 HSAMODE changes the OpenCL runtime API calls to ours.
 
+
 #define SIZE 16
-#define MODE 2
+#define MODE 3
+#define NUM_THREADS 1
+#define CHUNKSIZE 4
 #define HSAMODE 0
 
 //LOCALMEM = 1 puts the cl_mem buffer in the GPU's local memory.
@@ -48,13 +50,13 @@
 #define SYSMEM 0
 
 //configure global and work sizes for stream mode
-#define GWS_0 32
-#define GWS_1 32
+#define GWS_0 16
+#define GWS_1 16
 #define LWS_0 8
 #define LWS_1 8
 
 //Kernel run path
-char KERNEL[] = "/home/stardica/Desktop/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
+char KERNEL[] = "/home/stardica/.local/share/Trash/files/Delete/CDA7919DoctoralResearch/MatrixMultiply/src/MatrixMultiply.cl.bin.GPU";
 
 //1 if GPU 0 if CPU -1 if not set
 int CPUGPUFLAG = 1;
@@ -83,6 +85,15 @@ struct RowColumnData{
 	int ColumnNum;
 };
 
+struct MatrixData{
+
+	int id;
+	int num_chunks;
+	int Size;
+	int RowNum;
+	int ColumnNum;
+};
+
 //Matrices
 int matA[SIZE][SIZE];
 int matB[SIZE][SIZE];
@@ -91,6 +102,7 @@ int matC[SIZE][SIZE];
 //function declarations
 void print_me(char *string);
 void *RowColumnMultiply(void *data);
+void *ChunkMultiply(void *data);
 void LoadMatrices(void);
 void PrintMatrices(void);
 cl_context CreateContext(void);
@@ -108,7 +120,6 @@ inline void assignToThisCore(int core_id)
     CPU_SET(core_id, &mask);
     sched_setaffinity(0, sizeof(mask), &mask);
 }
-
 
 int main(int argc, char *argv[]){
 
@@ -137,39 +148,38 @@ int main(int argc, char *argv[]){
 
 		//printf("Getting number of OpenCL Platforms...\n");
 		errNum = clGetPlatformIDs(0, NULL, &numPlatforms);
-		    if (errNum != CL_SUCCESS)
-		    {
-		        printf("Failed to get number of OpenCL platforms.\n");
-		        return 0;
-		    }
-		    else
-		    {
+		if (errNum != CL_SUCCESS)
+		{
+			printf("Failed to get number of OpenCL platforms.\n");
+			return 0;
+		}
+		else
+		{
 
-		    	//printf("found %d.\n", numPlatforms);
-		    }
+			//printf("found %d.\n", numPlatforms);
+		}
 
 		//printf("Allocating space for the platform info...\n");
 		platforms = (cl_platform_id *)malloc(numPlatforms*sizeof(cl_platform_id));
 
 		printf("---Platform Info---\n");
 		errNum = clGetPlatformIDs(numPlatforms, platforms, NULL);
-			if (errNum != CL_SUCCESS)
-			{
-				printf("Failed to get platform info.\n");
-				return 0;
-			}
-			else
-			{
-				clGetPlatformInfo (platforms[0], CL_PLATFORM_VENDOR, sizeof(vendor), vendor, NULL);
-				clGetPlatformInfo (platforms[0], CL_PLATFORM_NAME, sizeof(name), name, NULL);
-				clGetPlatformInfo (platforms[0], CL_PLATFORM_VERSION, sizeof(version), version, NULL);
+		if (errNum != CL_SUCCESS)
+		{
+			printf("Failed to get platform info.\n");
+			return 0;
+		}
+		else
+		{
+			clGetPlatformInfo (platforms[0], CL_PLATFORM_VENDOR, sizeof(vendor), vendor, NULL);
+			clGetPlatformInfo (platforms[0], CL_PLATFORM_NAME, sizeof(name), name, NULL);
+			clGetPlatformInfo (platforms[0], CL_PLATFORM_VERSION, sizeof(version), version, NULL);
 
-				//printf("Got platform info.\n");
-		    	printf("Vendor: \t%s\n", vendor);
-		    	printf("Name:   \t%s\n", name);
-		    	printf("Version:\t%s\n", version);
-
-		    }
+			//printf("Got platform info.\n");
+			printf("Vendor: \t%s\n", vendor);
+			printf("Name:   \t%s\n", name);
+			printf("Version:\t%s\n", version);
+		}
 
 		//printf("Getting number of devices...\n");
 		errNum = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices);
@@ -222,9 +232,9 @@ int main(int argc, char *argv[]){
 				printf("Driver Version:\t%s\n", DRIVER_VERSION);
 				printf("EXTENSIONS:\t%s\n", EXTENSIONS);
 				printf("Number of CUs:\t%d\n", MAX_COMPUTE_UNITS);
-				printf("GMem:\t\t%lld (Bytes)\n", GLOBAL_MEM_SIZE);
-				printf("GMem $ Size:\t%lld (Bytes)\n", GLOBAL_MEM_CACHE_SIZE);
-				printf("GMem $ Line:\t%lld (Bytes)\n", GLOBAL_MEM_CACHELINE_SIZE);
+				printf("GMem:\t\t%lld (Bytes)\n", (long long) GLOBAL_MEM_SIZE);
+				printf("GMem $ Size:\t%lld (Bytes)\n", (long long) GLOBAL_MEM_CACHE_SIZE);
+				printf("GMem $ Line:\t%lld (Bytes)\n", (long long) GLOBAL_MEM_CACHELINE_SIZE);
 				if(GLOBAL_MEM_CACHE_TYPE == CL_NONE)
 				{
 					printf("GMem $ Type:\tCL_NONE\n");
@@ -238,17 +248,17 @@ int main(int argc, char *argv[]){
 				{
 					printf("GMem $ Type:\tCL_READ_WRITE_CACHE\n");
 				}
-				printf("LMem:\t\t%lld (Bytes)\n", LOCAL_MEM_SIZE);
-				printf("Work Group Size:%d (Max)\n", MAX_WORK_GROUP_SIZE);
+				printf("LMem:\t\t%lld (Bytes)\n", (long long) LOCAL_MEM_SIZE);
+				printf("Work Group Size:%d (Max)\n", (int) MAX_WORK_GROUP_SIZE);
 				printf("Work Item Dim:\t%d (Max)\n", MAX_WORK_ITEM_DIMENSIONS);
 				printf("Work Item Size:\t");
 				for(j = 0; j < MAX_WORK_ITEM_DIMENSIONS; j ++)
 				{
 						if (j != (MAX_WORK_ITEM_DIMENSIONS -1))
-						printf("%d, ", MAX_WORK_ITEM_SIZES[j]);
+						printf("%d, ", (int) MAX_WORK_ITEM_SIZES[j]);
 
 						if (j == (MAX_WORK_ITEM_DIMENSIONS -1))
-						printf("%d ", MAX_WORK_ITEM_SIZES[j]);
+						printf("%d ", (int) MAX_WORK_ITEM_SIZES[j]);
 				}
 				printf("(Max)\n");
 
@@ -306,258 +316,6 @@ int main(int argc, char *argv[]){
 	    //return 1;
 
 	}
-	else if (MODE == 6){
-
-		//todo free remaining objects not passed to cleanup
-
-		//profiling
-		int write_bytes = 0;
-		int read_bytes = 0;
-		/*unsigned long long start_cycles, stop_cycles;
-		unsigned long long start_setup, stop_setup;
-		unsigned long long start_write, stop_write;
-		unsigned long long start_read, stop_read;
-		unsigned long long start_finalize, stop_finalize;
-		struct timespec start_time_t, stop_time_t;*/
-
-
-		printf("Stream & Multi thread Mode\n\n");
-		//clock_gettime(CLOCK_MONOTONIC, &start_time_t);
-		//start_cycles = rdtsc();
-
-
-		int i;
-		time_t t;
-		srand((unsigned) time(&t));
-
-	    // Create the two input vectors
-	    printf("\nHostside malloc(s)\n");
-	    fflush(stdout);
-	    int *A = (int*)malloc(sizeof(int)*(SIZE*SIZE));
-	    int *B = (int*)malloc(sizeof(int)*(SIZE*SIZE));
-	    int *C = (int*)malloc(sizeof(int)*(SIZE*SIZE));
-
-	    printf("\nHostside mat init\n");
-	    fflush(stdout);
-	    for(i = 0; i < (SIZE*SIZE); i++) {
-	        A[i] = B[i] = rand() % 10 + 1;;
-	    }
-
-
-	    //Get platform and device information
-	    cl_context context = 0;
-	    cl_command_queue commandQueue = 0;
-	    cl_program program = 0;
-	    cl_device_id device = 0;
-	    cl_kernel kernel = 0;
-	    cl_uint err = 0;
-	    //char *filepath = NULL;
-
-	    //Create the context
-	    printf("\nCreateContext\n");
-	    fflush(stdout);
-	    context = CreateContext();
-	    if (context == NULL)
-	    {
-	    	printf("Failed to create OpenCL context.\n");
-	    	return 1;
-	    }
-
-	    printf("\nEnd CreateContext\n");
-	    fflush(stdout);
-
-	    //Create a command-queue on the first device available on the created context
-	    printf("\nCreateCommandQueue\n");
-	    fflush(stdout);
-	    commandQueue = CreateCommandQueue(context, &device);
-	    if (commandQueue == NULL)
-	    {
-	    	printf("Failed to create command queue.\n");
-	    	Cleanup(context, commandQueue, program, NULL);
-	    	return 1;
-	    }
-
-	    //create the program from the binary
-	    //program = CreateProgramFromBinary(context, device, "/home/stardica/Desktop/Kernels/vector.cl.bin.GPU");
-	    //strcat(KERNELPATHOUT, ".GPU")
-	    printf("\nCreateProgramFromBinary\n");
-	    fflush(stdout);
-	    program = CreateProgramFromBinary(context, device, KERNEL);
-	    if (program == NULL)
-	    {
-	    	printf("Failed to load kernel binary,\n");
-	    	Cleanup(context, commandQueue, program, NULL);
-	    	return 1;
-	    }
-
-
-
-	    // Create OpenCL kernel
-	    printf("\nclCreateKernel\n");
-	    fflush(stdout);
-	    kernel = clCreateKernel(program, "Matrix", NULL);
-	    if (kernel == NULL)
-	    {
-	    	printf("Failed to create kernel.\n");
-	    	Cleanup(context, commandQueue, program, NULL);
-	    	return 1;
-	    }
-
-	    cl_mem a_mem_obj = 0;
-	    cl_mem b_mem_obj = 0;
-	    cl_mem c_mem_obj = 0;
-
-  	    //Create memory buffers on the device for each vector
-
-	    printf("\nclCreateBuffer(s)\n");
-	    fflush(stdout);
-	    if(LOCALMEM == 1 && CACHEDMEM == 0)
-	    {
-	    	//this creates uncached buffers in the GPU's local memory
-		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-
-		    /*a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
-
-	    if (SYSMEM == 1 && CACHEDMEM == 0){
-	    	//this creates uncached buffers in the system memory
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-
-	    	/*a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
-
-	    if (SYSMEM == 1 && CACHEDMEM == 1){
-	    	//this creates cached buffers in the system memory.
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-
-	    	/*a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
-
-	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
-	    {
-	    	printf("Failed to create memory objects.\n");
-	    	Cleanup(context, commandQueue, program, kernel);
-	    	return 1;
-	    }
-
-	    syscall(BEGIN_PARALLEL_SECTION);
-
-	    //Copy the lists A and B to their respective memory buffers
-	    printf("\nclEnqueueWriteBuffer(s)\n");
-	    fflush(stdout);
-	    write_bytes += 2 * sizeof(int)*(SIZE*SIZE);
-	   // start_write = rdtsc();
-	    clEnqueueWriteBuffer(commandQueue, a_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), A, 0, NULL, NULL);
-	    clEnqueueWriteBuffer(commandQueue, b_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), B, 0, NULL, NULL);
-	   // stop_write = rdtsc();
-
-
-	    // Set the arguments of the kernel
-	    int *size = (int *)SIZE;
-	    printf("\nclSetKernelArg(s)\n");
-	    fflush(stdout);
-	    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&c_mem_obj);
-	    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&a_mem_obj);
-	    err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&b_mem_obj);
-	    err = clSetKernelArg(kernel, 3, sizeof(int), (void *)&size);
-	    if (err != CL_SUCCESS)
-	    {
-	    	printf("Kernel args not set.\n");
-	    	return 1;
-	    }
-
-	    // Execute the OpenCL kernel on the list
-	    size_t GlobalWorkSize[2], LocalWorkSize[2];
-
-	    //Rember that in OpenCL we need to express the globalWorkSize in
-	    //terms of the total number of threads. The underlying OpenCL API
-	    //will look at the globalWorkSize and divide by the localWorkSize
-	    //to arrive at a 64 by 64 NDRange of 16 by 16 work groups.
-
-	    GlobalWorkSize[0] = GWS_0;//SIZE*SIZE*SIZE; // Process the entire lists
-	    GlobalWorkSize[1] = GWS_1;//SIZE*SIZE*SIZE; // Process the entire lists
-	    LocalWorkSize[0] = LWS_0; //SIZE Divide work items into groups of 64
-	    LocalWorkSize[1] = LWS_1; //SIZE Divide work items into groups of 64
-
-		int j, k;
-
-		pthread_t tid[SIZE*SIZE];
-
-		//start our threads
-		k=0;
-		for(i=0;i<SIZE;i++){
-			for(j=0;j<SIZE;j++){
-				struct RowColumnData *RCData = (struct RowColumnData *) malloc(sizeof(struct RowColumnData));
-				RCData->RowNum = i;
-				RCData->ColumnNum = j;
-				//printf("Thread create %d Row %d Col %d\n", k, RCData->RowNum, RCData->ColumnNum);
-				pthread_create(&tid[k], NULL, RowColumnMultiply, RCData);
-				k++;
-			}
-		}
-
-		 //used null for local, lets OpenCL determine the best local size.
-	    //err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
-	    printf("\nclEnqueueNDRangeKernel\n");
-	    fflush(stdout);
-	    err = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, NULL);
-	    if (err != CL_SUCCESS)
-	    {
-	    	printf("ND range not enqueued. Code: %d\n", err);
-	    	return 1;
-	    }
-
-
-	    //Read the memory buffer C on the device to the local variable C
-	    printf("\nclEnqueueReadBuffer\n");
-	    fflush(stdout);
-	    read_bytes += sizeof(int)*(SIZE*SIZE);
-	    //start_read = rdtsc();
-	    err = clEnqueueReadBuffer(commandQueue, c_mem_obj, CL_TRUE, 0, (sizeof(int)*(SIZE*SIZE)), C, 0, NULL, NULL);
-	   // stop_read = rdtsc();
-	    if (err != CL_SUCCESS)
-	    {
-	    	printf("Buffer not returned.\n");
-	    	return 1;
-	    }
-
-
-	    //Join threads////////////////////////////
-		for (i=0;i<(SIZE*SIZE);i++){
-			pthread_join(tid[i], NULL);
-		}
-
-		syscall(END_PARALLEL_SECTION);
-
-		PrintMatrices();
-
-
-	    printf("\nHostside clean up\n");
-	    fflush(stdout);
-	    err = clFlush(commandQueue);
-	    err = clFinish(commandQueue);
-	    Cleanup(context, commandQueue, program, kernel);
-	    err = clReleaseMemObject(a_mem_obj);
-	    err = clReleaseMemObject(b_mem_obj);
-	    err = clReleaseMemObject(c_mem_obj);
-	    free(A);
-	    free(B);
-	    free(C);
-
-
-	}
 	else if (MODE == 3){
 
 		//todo free remaining objects not passed to cleanup
@@ -600,22 +358,22 @@ int main(int argc, char *argv[]){
 
 
 	    //print matrix
-    	/* printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
-	   	 for(i = 0; i < (SIZE*SIZE); i++)
+    	printf("Matrix A[%d][%d]:\n", SIZE, SIZE);
+	   	for(i = 0; i < (SIZE*SIZE); i++)
 	    {
-	    	printf("%3d ", A[i]);
-	        if(((i + 1) % SIZE) == 0)
-	        printf("\n");
+	   		printf("%3d ", A[i]);
+	   		if(((i + 1) % SIZE) == 0)
+	   			printf("\n");
 	    }
 
 	    //print matrix
-	   printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
+	   	printf("\nMatrix B[%d][%d]:\n", SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", B[i]);
 	        if(((i + 1) % SIZE) == 0)
-	        printf("\n");
-	    }*/
+	        	printf("\n");
+	    }
 
 
 	    //syscall(STATS_RESET);
@@ -640,8 +398,8 @@ int main(int argc, char *argv[]){
 	    	return 1;
 	    }
 
-	    printf("\nEnd CreateContext\n");
-	    fflush(stdout);
+	   /* printf("\nEnd CreateContext\n");
+	    fflush(stdout);*/
 
 	    //Create a command-queue on the first device available on the created context
 	    printf("\nCreateCommandQueue\n");
@@ -689,38 +447,59 @@ int main(int argc, char *argv[]){
 	    printf("\nclCreateBuffer(s)\n");
 	    fflush(stdout);
 	    if(LOCALMEM == 1 && CACHEDMEM == 0)
-	    {
-	    	//this creates uncached buffers in the GPU's local memory
-		    a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+		{
+			//this creates uncached buffers in the GPU's local memory
+			#if M2S_CGM_OCL_SIM
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
 
-		    /*a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-		    c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
+			}
+			#else
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+			}
+			#endif
+		}
 
-	    if (SYSMEM == 1 && CACHEDMEM == 0){
-	    	//this creates uncached buffers in the system memory
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+		if(SYSMEM == 1 && CACHEDMEM == 0)
+		{
+			//this creates uncached buffers in the system memory
+			#if M2S_CGM_OCL_SIM
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+			}
+			#else
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+			}
+			#endif
+		}
 
-	    	/*a_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
-
-	    if (SYSMEM == 1 && CACHEDMEM == 1){
-	    	//this creates cached buffers in the system memory.
-	    	a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
-
-	    	/*a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
-	    	c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);*/
-	    }
+		if(SYSMEM == 1 && CACHEDMEM == 1)
+		{
+			//this creates cached buffers in the system memory.
+			#if M2S_CGM_OCL_SIM
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL, CL_FALSE);
+			}
+			#else
+			{
+				a_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				b_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+				c_mem_obj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR, (sizeof(int)*(SIZE*SIZE)), NULL, NULL);
+			}
+			#endif
+		}
 
 	    if (a_mem_obj == NULL || b_mem_obj == NULL  || c_mem_obj == NULL)
 	    {
@@ -795,15 +574,13 @@ int main(int argc, char *argv[]){
 	    //syscall(STATS_STOP);
 
 	    //print matrix
-	    //for 2 x 2 should be 2, 3, 6, 11
-	    //for 3 x 3 should be 15, 18, 21, 42, 54, 66, 69, 90, 111
-	    /*printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
+	    printf("\nMatrix C[%d][%d] = A[%d][%d]*B[%d][%d]:\n", SIZE, SIZE, SIZE, SIZE, SIZE, SIZE);
 	    for(i = 0; i < (SIZE*SIZE); i++)
 	    {
 	    	printf("%3d ", C[i]);
 	        if(((i + 1) % SIZE) == 0)
 	        printf("\n");
-	    }*/
+	    }
 
 	    printf("\nHostside clean up\n");
 	    fflush(stdout);
@@ -839,23 +616,23 @@ int main(int argc, char *argv[]){
 	}
 	else if (MODE == 2){
 
+		printf("Multi Thread Mode\n");
 		//cal this:
-		assignToThisCore(0);//assign to core 0,1,2,...
+		//assignToThisCore(0);//assign to core 0,1,2,...
 
 		unsigned long long a, b;
-		a = rdtsc();
-		printf("\nstart clock Cycles: %llu\n", a);
-
-		printf("Multi Thread Mode\n");
-		int i, j, k;
+	    int i = 0;
+	    int j = 0;
+	    int k = 0;
 
 		LoadMatrices();
 
 		pthread_t tid[SIZE*SIZE];
 
-		//start our threads
-		k=0;
 
+		//printf("waiting\n");
+		//start our threads
+		a = rdtsc();
 		syscall(BEGIN_PARALLEL_SECTION);
 
 		for(i=0;i<SIZE;i++){
@@ -870,23 +647,23 @@ int main(int argc, char *argv[]){
 		}
 
 		//Join threads////////////////////////////
-		for (i=0;i<(SIZE*SIZE);i++){
+		for (i=0;i<NUM_THREADS;i++)
+		{
 			pthread_join(tid[i], NULL);
 		}
-
-		getchar();
-
 		syscall(END_PARALLEL_SECTION);
-
 		b = rdtsc();
-		printf("\nend clock Cycles: %llu\n", b);
+
+		PrintMatrices();
+
+
+
+		//printf("\nend clock Cycles: %llu\n", b);
 		printf("\nDone. Number of clock Cycles: %llu\n", b-a);
 
-		//PrintMatrices();
-
-
 	}
-	else if (MODE == 1){
+	else if (MODE == 1)
+	{
 
 		printf("Single Thread Mode\n\n");
 		//unsigned long long a, b;
@@ -907,7 +684,7 @@ int main(int argc, char *argv[]){
 			}
 		}
 
-		//PrintMatrices();
+		PrintMatrices();
 
 		//b = rdtsc();
 		//printf("\nDone. Number of clock Cycles: %llu\n", b-a);
@@ -916,12 +693,12 @@ int main(int argc, char *argv[]){
 	{
 		printf("---Misc Tests---\n\n");
 
-		printf("size of long long is %d\n", sizeof(long long));
-		printf("size of long is %d\n", sizeof(long));
-		printf("size of int is %d\n", sizeof(int));
-		printf("size of short is %d\n", sizeof(short));
-		printf("size of char * %d\n", sizeof(char *));
-		printf("size of unsigned int (word) %d\n", sizeof(unsigned int));
+		printf("size of long long is %d\n", (int) sizeof(long long));
+		printf("size of long is %d\n", (int) sizeof(long));
+		printf("size of int is %d\n", (int) sizeof(int));
+		printf("size of short is %d\n", (int) sizeof(short));
+		printf("size of char * %d\n", (int) sizeof(char *));
+		printf("size of unsigned int (word) %d\n", (int) sizeof(unsigned int));
 
 		char *string = "test string";
 		printf("Here is the string 1: \"%s\"\n", string);
@@ -1011,11 +788,7 @@ void LoadMatrices(void){
 		}
 	}
 
-	//for (i=0;i<SIZE;i++){
-	//	for(j=0;j<SIZE;j++){
-	//		matB[i][j] = rand() % 10 + 1;
-	//	}
-	//}
+	//PrintMatrices();
 }
 
 void PrintMatrices(void){
@@ -1050,6 +823,44 @@ void PrintMatrices(void){
 	 }
 }
 
+void *ChunkMultiply(void *data){
+
+	struct MatrixData *RCData = data;
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	//int SumOfProducts = 0;
+
+	int col_num = RCData->ColumnNum;
+
+	printf("my id is %d row is %d col is %d\n", RCData->id, RCData->RowNum, RCData->ColumnNum);
+
+	printf("size %d\n", RCData->Size);
+
+	//multiply mats/////////////////////////
+	for (i=0;i<RCData->Size;i++)
+	{
+		for(j=0;j<RCData->Size;j++)
+		{
+			for(k=0;k<RCData->Size;k++)
+			{
+				//printf("matC[%d][%d] = matC[%d][%d] + (matA[%d][%d] * matB[%d][%d])\n",
+				//		RCData->RowNum, RCData->ColumnNum, RCData->RowNum, RCData->ColumnNum, RCData->RowNum, k, k, RCData->ColumnNum);
+				matC[RCData->RowNum][RCData->ColumnNum] = matC[RCData->RowNum][RCData->ColumnNum] + (matA[RCData->RowNum][k] * matB[k][RCData->ColumnNum]);
+				//matC[i][j] = matC[i][j] + (matA[i][k] * matB[k][j]);
+			}
+
+			RCData->ColumnNum++;
+		}
+
+		RCData->ColumnNum = col_num;
+		RCData->RowNum++;
+	}
+
+	pthread_exit(0);
+}
+
+
 void *RowColumnMultiply(void *data){
 
 
@@ -1057,9 +868,11 @@ void *RowColumnMultiply(void *data){
 	int i, SumOfProducts = 0;
 
 	//printf("from thread Row %d Col %d\n", RCData->RowNum, RCData->ColumnNum);
-	for(i=0;i<SIZE;i++){
+
+	for(i=0;i<SIZE;i++)
+	{
 		SumOfProducts += matA[RCData->RowNum][i] * matB[i][RCData->ColumnNum];
-	   }
+	}
 
 	//assign the sum to its coordinate
 	matC[RCData->RowNum][RCData->ColumnNum] = SumOfProducts;
@@ -1404,3 +1217,5 @@ cl_program CreateProgramFromBinary(cl_context context, cl_device_id device, cons
     free(programBinary);
     return program;
 }
+
+
